@@ -1,0 +1,10 @@
+CREATE TABLE setor (
+    id BIGSERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL UNIQUE
+);
+
+INSERT INTO setor (nome) VALUES
+('COZINHA'),
+('LANCHONETE'),
+('PUB'),
+('BALCAO');

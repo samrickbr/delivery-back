@@ -1,8 +1,6 @@
 package br.com.inova.sigin.delivery.pedido.controller;
 
-import br.com.inova.sigin.delivery.pedido.dto.PedidoPendenciaRequest;
-import br.com.inova.sigin.delivery.pedido.dto.PedidoRequest;
-import br.com.inova.sigin.delivery.pedido.dto.PedidoResponse;
+import br.com.inova.sigin.delivery.pedido.dto.*;
 import br.com.inova.sigin.delivery.pedido.service.PedidoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +18,6 @@ public class PedidoController {
     @PostMapping
     public PedidoResponse criar(
             @RequestBody PedidoRequest request) {
-
         return service.criar(request);
     }
     @PutMapping("/{id}/aprovar")
@@ -39,19 +36,17 @@ public class PedidoController {
         return service.iniciarProducao(id);
     }
 
-    @PutMapping("/{id}/entrega")
-    public PedidoResponse sairEntrega(@PathVariable Long id) {
-        return service.sairEntrega(id);
-    }
-
     @PutMapping("/{id}/finalizar")
     public PedidoResponse finalizar(@PathVariable Long id) {
         return service.finalizar(id);
     }
 
     @PutMapping("/{id}/cancelar")
-    public PedidoResponse cancelar(@PathVariable Long id) {
-        return service.cancelar(id);
+    public PedidoResponse cancelar(
+            @PathVariable Long id,
+            @RequestBody CancelamentoRequest request
+    ) {
+        return service.cancelar(id, request);
     }
     @GetMapping
     public List<PedidoResponse> listar() {
@@ -65,14 +60,61 @@ public class PedidoController {
         return service.listarPorStatus(status);
     }
     @GetMapping("/cozinha")
-    public List<PedidoResponse> cozinha() {
-
-        return service.pedidosCozinha();
+    public ResponseEntity<List<PedidoOperacaoResponse>> cozinha(
+            @RequestParam String setor
+    ) {
+        return ResponseEntity.ok(
+                service.pedidosCozinha(setor)
+        );
     }
     @GetMapping("/finalizados")
     public ResponseEntity<List<PedidoResponse>> listarFinalizados() {
         return ResponseEntity.ok(
                 service.listarFinalizados()
+        );
+    }
+    @GetMapping("/entrega")
+    public ResponseEntity<List<PedidoResponse>> listarEntrega() {
+        return ResponseEntity.ok(
+                service.listarEntrega()
+        );
+    }
+    @PutMapping("/{id}/sair-entrega")
+    public ResponseEntity<PedidoResponse> sairEntrega(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(
+                service.sairParaEntrega(id)
+        );
+    }
+    @PutMapping("/{id}/entregar")
+    public ResponseEntity<PedidoResponse> entregar(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(
+                service.entregar(id)
+        );
+    }
+    @GetMapping("/entregues")
+    public ResponseEntity<List<PedidoResponse>> listarEntregues() {
+        return ResponseEntity.ok(
+                service.listarEntregues()
+        );
+    }
+    @GetMapping("/cozinha-operacao")
+    public List<PedidoOperacaoResponse> cozinhaOperacao() {
+        return service.pedidosOperacaoCozinha();
+    }
+    @GetMapping("/entrega-operacao")
+    public ResponseEntity<List<PedidoOperacaoResponse>> listarEntregaOperacao() {
+        return ResponseEntity.ok(
+                service.listarEntregaOperacao()
+        );
+    }
+    @GetMapping("/balcao")
+    public ResponseEntity<List<PedidoBalcaoResponse>> balcao() {
+        return ResponseEntity.ok(
+                service.listarBalcao()
         );
     }
 }

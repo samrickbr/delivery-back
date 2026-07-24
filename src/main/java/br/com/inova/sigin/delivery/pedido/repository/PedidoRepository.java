@@ -1,17 +1,22 @@
 package br.com.inova.sigin.delivery.pedido.repository;
 
 import br.com.inova.sigin.delivery.pedido.entity.Pedido;
-import org.springframework.data.jpa.repository.JpaRepository;
 import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
+import org.springframework.data.jpa.repository.JpaRepository;
+
 import java.util.List;
 
-public interface PedidoRepository
-        extends JpaRepository<Pedido, Long> {
-    List<Pedido> findByStatusOrderByDataCriacaoAsc(StatusPedido status);
+public interface PedidoRepository extends JpaRepository<Pedido, Long> {
 
     List<Pedido> findAllByOrderByDataCriacaoAsc();
-    List<Pedido> findByStatusInOrderByDataCriacaoAsc(
-            List<StatusPedido> status);
-    List<Pedido> findByStatusInOrderByIdDesc(List<StatusPedido> status);
 
+    List<Pedido> findByStatusOrderByDataCriacaoAsc(StatusPedido status);
+
+    List<Pedido> findByStatusInOrderByDataCriacaoAsc(List<StatusPedido> status);
+
+    List<Pedido> findByStatusOrderByStatusAlteradoEmAsc(StatusPedido status);
+
+    List<Pedido> findByStatusOrderByStatusAlteradoEmDesc(StatusPedido status);
+
+    List<Pedido> findByStatusInOrderByStatusAlteradoEmAsc(List<StatusPedido> status);
 }

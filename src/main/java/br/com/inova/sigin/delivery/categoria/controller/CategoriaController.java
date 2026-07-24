@@ -15,18 +15,14 @@ public class CategoriaController {
 
     private final CategoriaService service;
 
-
     @PostMapping
     public CategoriaResponse salvar(
             @RequestBody CategoriaRequest request) {
-
         return service.salvar(request);
     }
 
-
     @GetMapping
     public List<CategoriaResponse> listar() {
-
         return service.listar();
     }
 }

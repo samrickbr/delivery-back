@@ -1,5 +1,6 @@
 package br.com.inova.sigin.delivery.categoria.entity;
 
+import br.com.inova.sigin.delivery.setor.entity.Setor;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,4 +22,8 @@ public class Categoria {
     private String descricao;
 
     private Boolean ativo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "setor_id")
+    private Setor setor;
 }

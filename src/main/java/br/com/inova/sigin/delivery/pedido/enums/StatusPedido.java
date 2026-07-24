@@ -7,6 +7,7 @@ public enum StatusPedido {
     PENDENTE,
     EM_PRODUCAO,
     SAIU_ENTREGA,
+    ENTREGUE,
     FINALIZADO,
     CANCELADO
 }
