@@ -18,6 +18,7 @@ public class PedidoMapper {
                 .status(pedido.getStatus().name())
                 .observacao(pedido.getObservacao())
                 .observacaoOperacao(pedido.getObservacaoOperacao())
+                .valorTotal(pedido.getValorTotal())
                 .itens(
                         pedido.getItens()
                                 .stream()
@@ -65,6 +66,24 @@ public class PedidoMapper {
                 .status(pedido.getStatus().name())
                 .valorTotal(pedido.getValorTotal())
                 .formaPagamento(pedido.getFormaPagamento())
+                .itens(
+                        pedido.getItens()
+                                .stream()
+                                .map(this::toOperacaoItem)
+                                .toList()
+                )
+                .build();
+    }
+
+    public PedidoOperacaoResponse toEntregaResponse(Pedido pedido){
+
+        return PedidoOperacaoResponse.builder()
+                .id(pedido.getId())
+                .clienteNome(pedido.getClienteNome())
+                .status(pedido.getStatus().name())
+                .observacao(pedido.getObservacao())
+                .observacaoOperacao(pedido.getObservacaoOperacao())
+                .valorTotal(pedido.getValorTotal())
                 .itens(
                         pedido.getItens()
                                 .stream()

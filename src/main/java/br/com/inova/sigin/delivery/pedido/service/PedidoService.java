@@ -232,14 +232,9 @@ public class PedidoService {
     }
     public List<PedidoOperacaoResponse> listarEntregaOperacao() {
         return repository
-                .findByStatusInOrderByStatusAlteradoEmAsc(
-                        List.of(
-                                StatusPedido.FINALIZADO,
-                                StatusPedido.SAIU_ENTREGA
-                        )
-                )
+                .findByStatusOrderByStatusAlteradoEmAsc(StatusPedido.FINALIZADO)
                 .stream()
-                .map(pedido -> mapper.toOperacaoResponse(pedido, null))
+                .map(mapper::toEntregaResponse)
                 .toList();
     }
 
