@@ -6,6 +6,7 @@ public enum StatusPedido {
     APROVADO,
     PENDENTE,
     EM_PRODUCAO,
+    SEPARADO,
     SAIU_ENTREGA,
     ENTREGUE,
     FINALIZADO,

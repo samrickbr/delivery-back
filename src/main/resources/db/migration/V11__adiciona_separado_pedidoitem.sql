@@ -1,0 +1,2 @@
+ALTER TABLE pedido_item
+ADD COLUMN separado BOOLEAN DEFAULT FALSE;

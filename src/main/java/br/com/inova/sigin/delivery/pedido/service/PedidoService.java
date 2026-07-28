@@ -6,6 +6,7 @@ import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
 import br.com.inova.sigin.delivery.pedido.mapper.PedidoMapper;
 import br.com.inova.sigin.delivery.pedido.repository.PedidoRepository;
 import br.com.inova.sigin.delivery.pedidoitem.entity.PedidoItem;
+import br.com.inova.sigin.delivery.pedidoitem.enums.StatusOperacao;
 import br.com.inova.sigin.delivery.pedidoitem.repository.PedidoItemRepository;
 import br.com.inova.sigin.delivery.produto.entity.Produto;
 import br.com.inova.sigin.delivery.produto.repository.ProdutoRepository;
@@ -65,6 +66,8 @@ public class PedidoService {
                     .quantidade(itemRequest.getQuantidade())
                     .valorUnitario(produto.getPreco())
                     .valorTotal(valorItem)
+                    .separado(false)
+                    .statusOperacao(StatusOperacao.APROVADO)
                     .build();
             itemRepository.save(item);
             total = total.add(valorItem);
@@ -94,42 +97,95 @@ public class PedidoService {
         pedido.setStatusAlteradoEm(LocalDateTime.now());
         return salvar(pedido);
     }
-
     @Transactional
     public PedidoResponse colocarPendente(
             Long id,
-            PedidoPendenciaRequest request) {
+            String setor,
+            PedidoPendenciaRequest request
+    ) {
+
         Pedido pedido = buscarEntidade(id);
-        pedido.setStatus(StatusPedido.PENDENTE);
-        pedido.setStatusAlteradoEm(LocalDateTime.now());
+
+        pedido.getItens()
+                .stream()
+                .filter(item ->
+                        item.getProduto()
+                                .getCategoria()
+                                .getSetor()
+                                .getNome()
+                                .equals(setor)
+                )
+                .forEach(item -> {
+
+                    item.setStatusOperacao(
+                            StatusOperacao.PENDENTE
+                    );
+
+                });
+
+
         pedido.setObservacaoOperacao(
                 request.getMotivo()
         );
-        return mapper.toResponse(
-                repository.save(pedido)
+
+        pedido.setStatusAlteradoEm(
+                LocalDateTime.now()
         );
+        repository.save(pedido);
+        return mapper.toResponse(pedido);
     }
 
-    public PedidoResponse iniciarProducao(Long id) {
-        Pedido pedido = buscarEntidade(id);
-        statusService.iniciarProducao(pedido);
-        pedido.setStatusAlteradoEm(LocalDateTime.now());
-        return salvar(pedido);
-    }
+    @Transactional
+    public PedidoResponse cancelar(
+            Long id,
+            String setor,
+            CancelamentoRequest request
+    ) {
 
-    public PedidoResponse finalizar(Long id) {
         Pedido pedido = buscarEntidade(id);
-        statusService.finalizar(pedido);
-        pedido.setStatusAlteradoEm(LocalDateTime.now());
-        return salvar(pedido);
-    }
 
-    public PedidoResponse cancelar(Long id, CancelamentoRequest request) {
-        Pedido pedido = buscarEntidade(id);
-        statusService.cancelar(pedido);
-        pedido.setObservacaoOperacao(request.getJustificativa());
-        pedido.setStatusAlteradoEm(LocalDateTime.now());
-        return salvar(pedido);
+        pedido.getItens()
+                .stream()
+                .filter(item ->
+                        item.getProduto()
+                                .getCategoria()
+                                .getSetor()
+                                .getNome()
+                                .equals(setor)
+                )
+                .forEach(item -> {
+
+                    item.setStatusOperacao(
+                            StatusOperacao.CANCELADO
+                    );
+
+                });
+
+        boolean todosCancelados =
+                pedido.getItens()
+                        .stream()
+                        .allMatch(item ->
+                                item.getStatusOperacao()
+                                        == StatusOperacao.CANCELADO
+                        );
+
+        if (todosCancelados) {
+
+            pedido.setStatus(
+                    StatusPedido.CANCELADO
+            );
+
+        }
+
+        pedido.setObservacaoOperacao(
+                request.getJustificativa()
+        );
+
+        pedido.setStatusAlteradoEm(
+                LocalDateTime.now()
+        );
+        repository.save(pedido);
+        return mapper.toResponse(pedido);
     }
 
     public List<PedidoResponse> listar() {
@@ -148,16 +204,32 @@ public class PedidoService {
     }
 
     public List<PedidoOperacaoResponse> pedidosCozinha(String setor) {
-        return repository.findByStatusInOrderByStatusAlteradoEmAsc(
+
+        List<PedidoItem> itens =
+                itemRepository.findByProdutoCategoriaSetorNomeAndStatusOperacaoIn(
+                        setor,
                         List.of(
-                                StatusPedido.APROVADO,
-                                StatusPedido.EM_PRODUCAO,
-                                StatusPedido.PENDENTE
+                                StatusOperacao.APROVADO,
+                                StatusOperacao.PENDENTE,
+                                StatusOperacao.EM_PRODUCAO
                         )
+                );
+
+
+        return itens.stream()
+                .map(PedidoItem::getPedido)
+                .distinct()
+                .filter(pedido ->
+                        pedido.getStatus() != StatusPedido.ENTREGUE &&
+                                pedido.getStatus() != StatusPedido.CANCELADO &&
+                                pedido.getStatus() != StatusPedido.FINALIZADO
                 )
-                .stream()
-                .map(pedido -> mapper.toOperacaoResponse(pedido, setor))
-                .filter(pedido -> !pedido.getItens().isEmpty())
+                .map(pedido ->
+                        mapper.toOperacaoResponse(pedido, setor)
+                )
+                .filter(pedido ->
+                        !pedido.getItens().isEmpty()
+                )
                 .toList();
     }
 
@@ -177,7 +249,7 @@ public class PedidoService {
     public List<PedidoResponse> listarEntrega() {
         return repository.findByStatusInOrderByStatusAlteradoEmAsc(
                         List.of(
-                                StatusPedido.FINALIZADO,
+                                StatusPedido.SEPARADO,
                                 StatusPedido.SAIU_ENTREGA
                         )
                 )
@@ -230,19 +302,156 @@ public class PedidoService {
                 .map(pedido -> mapper.toOperacaoResponse(pedido, null))
                 .toList();
     }
+
+    // =====================================
+    // ENTREGA - pedidos finalizados ou em rota
+    // =====================================
     public List<PedidoOperacaoResponse> listarEntregaOperacao() {
+
         return repository
-                .findByStatusOrderByStatusAlteradoEmAsc(StatusPedido.FINALIZADO)
+                .findByStatusInOrderByStatusAlteradoEmAsc(
+                        List.of(
+                                StatusPedido.SEPARADO,
+                                StatusPedido.SAIU_ENTREGA
+                        )
+                )
                 .stream()
                 .map(mapper::toEntregaResponse)
                 .toList();
     }
 
     public List<PedidoBalcaoResponse> listarBalcao() {
+
         return repository
-                .findByStatusOrderByDataCriacaoAsc(StatusPedido.RECEBIDO)
+                .findByStatusInOrderByDataCriacaoAsc(
+                        List.of(
+                                StatusPedido.RECEBIDO,
+                                StatusPedido.APROVADO,
+                                StatusPedido.EM_PRODUCAO,
+                                StatusPedido.PENDENTE,
+                                StatusPedido.FINALIZADO
+                        )
+                )
                 .stream()
                 .map(mapper::toBalcaoResponse)
                 .toList();
+    }
+
+    public PedidoResponse separar(Long id) {
+        Pedido pedido = repository.findById(id)
+                .orElseThrow();
+        pedido.setStatus(StatusPedido.SEPARADO);
+        repository.save(pedido);
+        return mapper.toResponse(pedido);
+    }
+
+    @Transactional
+    public PedidoResponse liberarEntrega(Long id, SeparacaoRequest request) {
+
+        Pedido pedido = buscarEntidade(id);
+
+        for (SeparacaoItemRequest itemRequest : request.getItens()) {
+
+            PedidoItem item = itemRepository.findById(itemRequest.getItemId())
+                    .orElseThrow();
+
+            item.setSeparado(itemRequest.getSeparado());
+
+            itemRepository.save(item);
+        }
+
+        boolean todosSeparados =
+                pedido.getItens()
+                        .stream()
+                        .allMatch(PedidoItem::getSeparado);
+
+        if (!todosSeparados) {
+            throw new RuntimeException("Existem itens sem separação.");
+        }
+
+        pedido.setStatus(StatusPedido.SEPARADO);
+        pedido.setStatusAlteradoEm(LocalDateTime.now());
+
+        return mapper.toResponse(
+                repository.save(pedido)
+        );
+    }
+
+    @Transactional
+    public PedidoResponse iniciarProducao(Long id, String setor) {
+
+        Pedido pedido = buscarEntidade(id);
+
+        pedido.getItens()
+                .stream()
+                .filter(item ->
+                        item.getProduto()
+                                .getCategoria()
+                                .getSetor()
+                                .getNome()
+                                .equals(setor)
+                )
+                .forEach(item ->
+                        item.setStatusOperacao(
+                                StatusOperacao.EM_PRODUCAO
+                        )
+                );
+
+
+        pedido.setStatusAlteradoEm(
+                LocalDateTime.now()
+        );
+
+        repository.save(pedido);
+
+        return mapper.toResponse(pedido);
+    }
+
+    @Transactional
+    public PedidoResponse finalizar(Long id, String setor) {
+
+        Pedido pedido = buscarEntidade(id);
+
+        pedido.getItens()
+                .stream()
+                .filter(item ->
+                        item.getProduto()
+                                .getCategoria()
+                                .getSetor()
+                                .getNome()
+                                .equals(setor)
+                )
+                .forEach(item ->
+                        item.setStatusOperacao(
+                                StatusOperacao.FINALIZADO
+                        )
+                );
+
+
+        boolean todosFinalizados =
+                pedido.getItens()
+                        .stream()
+                        .allMatch(item ->
+                                item.getStatusOperacao()
+                                        == StatusOperacao.FINALIZADO
+                        );
+
+
+        if (todosFinalizados) {
+
+            pedido.setStatus(
+                    StatusPedido.FINALIZADO
+            );
+        }
+
+
+        pedido.setStatusAlteradoEm(
+                LocalDateTime.now()
+        );
+
+
+        repository.save(pedido);
+
+        return mapper.toResponse(pedido);
     }
 }

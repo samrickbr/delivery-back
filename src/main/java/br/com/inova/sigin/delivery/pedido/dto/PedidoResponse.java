@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @Builder
@@ -14,6 +15,8 @@ public class PedidoResponse {
     private String clienteNome;
 
     private String status;
+
+    private List<ItemOperacaoResponse> itens;
 
     private BigDecimal valorTotal;
 

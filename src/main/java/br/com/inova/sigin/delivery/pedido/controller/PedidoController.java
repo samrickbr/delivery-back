@@ -1,11 +1,11 @@
 package br.com.inova.sigin.delivery.pedido.controller;
 
 import br.com.inova.sigin.delivery.pedido.dto.*;
+import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
 import br.com.inova.sigin.delivery.pedido.service.PedidoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
 
 import java.util.List;
 @RestController
@@ -25,28 +25,44 @@ public class PedidoController {
         return service.aprovar(id);
     }
     @PutMapping("/{id}/pendente")
-    public PedidoResponse colocarPendente(
+    public ResponseEntity<PedidoResponse> colocarPendente(
             @PathVariable Long id,
-            @RequestBody PedidoPendenciaRequest request) {
-
-        return service.colocarPendente(id, request);
+            @RequestParam String setor,
+            @RequestBody PedidoPendenciaRequest request
+    ) {
+        return ResponseEntity.ok(
+                service.colocarPendente(id, setor, request)
+        );
     }
     @PutMapping("/{id}/producao")
-    public PedidoResponse iniciarProducao(@PathVariable Long id) {
-        return service.iniciarProducao(id);
+    public ResponseEntity<PedidoResponse> iniciarProducao(
+            @PathVariable Long id,
+            @RequestParam String setor
+    ) {
+        return ResponseEntity.ok(
+                service.iniciarProducao(id, setor)
+        );
     }
 
     @PutMapping("/{id}/finalizar")
-    public PedidoResponse finalizar(@PathVariable Long id) {
-        return service.finalizar(id);
-    }
-
-    @PutMapping("/{id}/cancelar")
-    public PedidoResponse cancelar(
+    public ResponseEntity<PedidoResponse> finalizar(
             @PathVariable Long id,
-            @RequestBody CancelamentoRequest request
+            @RequestParam String setor
     ) {
-        return service.cancelar(id, request);
+        return ResponseEntity.ok(
+                service.finalizar(id, setor)
+        );
+    }
+    @PutMapping("/{id}/cancelar")
+    public ResponseEntity<PedidoResponse> cancelar(
+            @PathVariable Long id,
+            @RequestParam String setor,
+            @RequestBody CancelamentoRequest request
+    )
+    {
+        return ResponseEntity.ok(
+                service.cancelar(id, setor, request)
+        );
     }
     @GetMapping
     public List<PedidoResponse> listar() {
@@ -115,6 +131,26 @@ public class PedidoController {
     public ResponseEntity<List<PedidoBalcaoResponse>> balcao() {
         return ResponseEntity.ok(
                 service.listarBalcao()
+        );
+    }
+
+    @PutMapping("/{id}/separar")
+    public ResponseEntity<PedidoResponse> separar(
+            @PathVariable Long id,
+            @RequestBody SeparacaoRequest request
+    ) {
+        return ResponseEntity.ok(
+                service.liberarEntrega(id, request)
+        );
+    }
+
+    @PutMapping("/{id}/liberar-entrega")
+    public ResponseEntity<PedidoResponse> liberarEntrega(
+            @PathVariable Long id,
+            @RequestBody SeparacaoRequest request
+    ) {
+        return ResponseEntity.ok(
+                service.liberarEntrega(id, request)
         );
     }
 }

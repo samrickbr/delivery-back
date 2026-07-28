@@ -1,6 +1,7 @@
 package br.com.inova.sigin.delivery.pedidoitem.entity;
 
 import br.com.inova.sigin.delivery.pedido.entity.Pedido;
+import br.com.inova.sigin.delivery.pedidoitem.enums.StatusOperacao;
 import br.com.inova.sigin.delivery.produto.entity.Produto;
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,4 +34,15 @@ public class PedidoItem {
     private BigDecimal valorUnitario;
 
     private BigDecimal valorTotal;
+
+    // ==========================================
+    // CHECKLIST DE SEPARAÇÃO
+    // false = ainda não separado
+    // true  = item separado pelo balcão
+    // ==========================================
+    @Builder.Default
+    private Boolean separado = false;
+
+    @Enumerated(EnumType.STRING)
+    private StatusOperacao statusOperacao;
 }
