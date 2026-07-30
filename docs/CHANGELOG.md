@@ -385,3 +385,147 @@ PRONTO_DESPACHO
 - dashboards
 - integração com entregadores
 
+## 30/07/2026
+
+# Delivery v0.2.0 - Deploy Produção
+
+## Ambiente publicado
+
+Primeira versão do SIGIN Delivery disponível online.
+
+Infraestrutura:
+
+- Backend publicado no Railway
+- Banco PostgreSQL publicado no Railway
+- Frontend publicado no Vercel
+- Comunicação frontend/backend via HTTPS
+- Swagger configurado para ambiente de produção
+
+---
+
+# Fluxo operacional validado
+
+Fluxo completo testado em ambiente online:
+CLIENTE
+↓
+BALCÃO
+↓
+PRODUÇÃO
+↓
+SEPARAÇÃO
+↓
+ENTREGA
+↓
+HISTÓRICO
+
+
+---
+
+# Funcionalidades validadas
+
+## Pedidos
+
+- criação de pedidos pelo cardápio
+- recebimento no balcão
+- aprovação de pedidos
+- cancelamento com justificativa
+
+## Produção
+
+- direcionamento por setor
+- produção independente por setor
+- setores validados:
+
+    - LANCHONETE
+    - PIZZARIA
+
+- início de produção
+- pedidos pendentes
+- retomada de produção
+- finalização de produção
+
+## Entrega
+
+- separação operacional
+- liberação para entrega
+- saída para entrega
+- confirmação de entrega
+
+---
+
+# Correções realizadas
+
+## Infraestrutura
+
+Corrigido problema de Swagger em produção.
+
+Causa:
+
+Railway utiliza proxy reverso e o Spring gerava URLs HTTP no OpenAPI.
+
+Correção:
+
+Configuração de headers forward no ambiente de produção.
+
+---
+
+## Setores
+
+Corrigido cadastro operacional:
+
+- criação do setor PIZZARIA
+- ajuste da categoria Pizzas
+- validação Produto → Categoria → Setor
+
+---
+
+## Frontend
+
+Corrigido filtro da tela Lanchonete.
+
+Antes:
+setor=COZINHA
+
+Depois:
+setor=LANCHONETE
+
+---
+
+# Arquitetura validada
+
+Modelo atual:
+Produto
+↓
+Categoria
+↓
+Setor
+↓
+PedidoItem
+↓
+Operação
+
+Essa estrutura será futuramente migrada para o módulo SIGIN Core.
+
+---
+
+# Próxima etapa
+
+Evolução para arquitetura ERP modular.
+
+Planejado:
+
+SIGIN Core
+
+- empresas
+- usuários
+- permissões
+- auditoria
+- cadastros base
+
+Após estabilização do Core:
+
+- migração de Produto
+- migração de Categoria
+- migração de Setor
+
+O Delivery passará a consumir as informações do Core.
