@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "pedido_item")
@@ -37,12 +38,20 @@ public class PedidoItem {
 
     // ==========================================
     // CHECKLIST DE SEPARAÇÃO
-    // false = ainda não separado
-    // true  = item separado pelo balcão
     // ==========================================
     @Builder.Default
     private Boolean separado = false;
 
     @Enumerated(EnumType.STRING)
     private StatusOperacao statusOperacao;
+
+    // ==========================================
+    // HISTORICO CANCELAMENTO ITEM
+    // ==========================================
+
+    private String motivoCancelamento;
+
+    private LocalDateTime canceladoEm;
+
+    private String canceladoPor;
 }

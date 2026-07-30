@@ -1,0 +1,2 @@
+ALTER TABLE pedido
+ADD COLUMN conferencia_em TIMESTAMP;

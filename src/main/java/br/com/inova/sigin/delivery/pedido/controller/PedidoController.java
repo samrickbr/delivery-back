@@ -153,4 +153,53 @@ public class PedidoController {
                 service.liberarEntrega(id, request)
         );
     }
+    @PutMapping("/{id}/conferir")
+    public ResponseEntity<PedidoResponse> conferir(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(
+                service.conferir(id)
+        );
+    }
+    @GetMapping("/{id}/historico")
+    public ResponseEntity<List<PedidoHistoricoResponse>> historico(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(
+                service.listarHistorico(id)
+        );
+    }
+
+    @PutMapping("/{id}/cancelar-pedido")
+    public ResponseEntity<PedidoResponse> cancelarPedido(
+            @PathVariable Long id,
+            @RequestBody CancelamentoRequest request
+    ) {
+        return ResponseEntity.ok(
+                service.cancelarPedido(id, request)
+        );
+    }
+    @PutMapping("/{id}/cancelar-itens")
+    public ResponseEntity<PedidoResponse> cancelarItens(
+            @PathVariable Long id,
+            @RequestParam String setor,
+            @RequestBody CancelamentoItensRequest request
+    ) {
+        return ResponseEntity.ok(
+                service.cancelarItens(id, setor, request)
+        );
+    }
+    @PutMapping("/{id}/cancelar-completo")
+    public ResponseEntity<PedidoResponse> cancelarCompleto(
+            @PathVariable Long id,
+            @RequestBody CancelamentoRequest request
+    ) {
+
+        return ResponseEntity.ok(
+                service.cancelarPedidoCompleto(
+                        id,
+                        request.getJustificativa()
+                )
+        );
+    }
 }

@@ -76,7 +76,9 @@ Setor
 
 
 Cada operação deve visualizar somente itens pertencentes ao seu setor.
+Cada PedidoItem possui controle operacional independente.
 
+Um mesmo pedido pode possuir itens em estados diferentes conforme o setor responsável.
 
 ---
 
@@ -87,6 +89,8 @@ Um pedido aprovado pode iniciar produção.
 
 
 Alteração:
+
+PedidoItem:
 
 APROVADO → EM_PRODUCAO
 
@@ -108,6 +112,8 @@ Exemplo:
 
 Alteração:
 
+PedidoItem:
+
 EM_PRODUCAO → PENDENTE
 
 
@@ -125,26 +131,40 @@ observacao_operacao
 
 # Retomar produção
 
+## Futuro
 
-Pedidos pendentes podem retornar para produção.
-
+Pedidos pendentes poderão retornar para produção.
 
 Alteração:
 
-PENDENTE → EM_PRODUCAO
+PedidoItem:
 
+PENDENTE → EM_PRODUCAO
 
 ---
 
 # Finalização da produção
 
 
-Quando todos os setores necessários concluírem o pedido:
+# Finalização da produção
 
-Alteração:
 
-EM_PRODUCAO → FINALIZADO
+Cada setor finaliza seus próprios PedidoItem.
 
+
+Um pedido somente recebe:
+
+FINALIZADO
+
+
+quando todos os itens estiverem:
+
+
+FINALIZADO
+
+ou
+
+CANCELADO
 
 O pedido fica disponível para o fluxo de entrega.
 
@@ -155,15 +175,44 @@ O pedido fica disponível para o fluxo de entrega.
 
 
 ## Enviar para entrega
-
-
-Pedidos finalizados podem sair para entrega.
-
-
 Alteração:
 
-FINALIZADO → SAIU_ENTREGA
 
+SEPARADO → SAIU_ENTREGA
+
+
+# Conferência e separação
+
+
+Após produção:
+
+
+FINALIZADO
+
+
+O balcão realiza:
+
+
+- conferência dos itens
+- validação do pedido
+- separação
+
+
+Fluxo:
+
+
+FINALIZADO
+
+↓
+
+AGUARDANDO_SEPARACAO
+
+↓
+
+SEPARADO
+
+
+Somente pedidos SEPARADOS podem seguir para entrega.
 
 ---
 
@@ -183,10 +232,50 @@ SAIU_ENTREGA → ENTREGUE
 # Cancelamento
 
 
-## Cancelar pedido
+## Cancelamento de itens
 
 
-Um pedido pode ser cancelado durante o fluxo operacional.
+PedidoItem pode ser cancelado durante o fluxo operacional.
+
+
+Status permitidos:
+
+
+APROVADO
+
+PENDENTE
+
+EM_PRODUCAO
+
+FINALIZADO
+
+
+↓
+
+CANCELADO
+
+
+
+Obrigatório informar:
+
+
+- justificativa
+
+
+A justificativa é armazenada no item cancelado.
+
+
+
+## Cancelamento do pedido
+
+
+O Pedido recebe:
+
+
+CANCELADO
+
+
+somente quando todos os seus itens estiverem cancelados.
 
 
 Status final:
@@ -211,12 +300,8 @@ observacao_operacao
 
 Pedidos considerados encerrados:
 
-
-- FINALIZADO
-- SAIU_ENTREGA
 - ENTREGUE
 - CANCELADO
-
 
 ---
 
@@ -280,79 +365,50 @@ COZINHA
 
 ---
 
-# Regras futuras
+# Controle operacional por item
 
 
-## Status por item
+Implementado.
 
 
-Problema atual:
-
-O status pertence ao pedido inteiro.
+Cada PedidoItem possui seu próprio ciclo:
 
 
-Exemplo:
+- APROVADO
+- PENDENTE
+- EM_PRODUCAO
+- FINALIZADO
+- CANCELADO
 
 
-Pedido:
-
-- Pizza
-- Lanche
-
-
-Ambos compartilham o mesmo status.
-
-
-Evolução:
-
-
-Pedido
-
-|
-
-├── Item Pizza
-
-│   status produção
-
-
-└── Item Lanche
-
-    status produção
-
-
-
-Objetivo:
-
-Permitir que setores trabalhem de forma independente.
+Permite que setores diferentes trabalhem no mesmo pedido de forma independente.
 
 
 ---
 
-# Novo status futuro
+# Evolução futura
 
 
-Substituir conceito:
+Avaliar criação do status:
 
-FINALIZADO
-
-
-Por:
 
 PRONTO_DESPACHO
 
 
-Motivo:
+para separar claramente:
 
 
-Finalização da produção não significa que o pedido está pronto para envio.
+FINALIZADO
+
+(produção concluída)
 
 
-Ainda podem existir etapas:
+de
 
-- separar bebidas
-- conferir pedido
-- preparar despacho
-- enviar entregador
+
+PRONTO_DESPACHO
+
+(pedido conferido e pronto para envio)
 
 
 ---
@@ -379,6 +435,9 @@ Usuário Cozinha:
 Usuário Entrega:
 
 - visualiza pedidos liberados para entrega
+
+O histórico operacional deverá registrar o usuário real responsável pela ação.
+
 
 
 

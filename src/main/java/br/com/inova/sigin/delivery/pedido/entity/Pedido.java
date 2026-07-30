@@ -1,6 +1,7 @@
 package br.com.inova.sigin.delivery.pedido.entity;
 
 import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
+import br.com.inova.sigin.delivery.pedidohistorico.entity.PedidoHistorico;
 import br.com.inova.sigin.delivery.pedidoitem.entity.PedidoItem;
 import jakarta.persistence.*;
 import lombok.*;
@@ -54,6 +55,19 @@ public class Pedido {
             orphanRemoval = true,
             fetch = FetchType.LAZY
     )
+    @OrderBy("dataHora DESC")
+    @Builder.Default
+    private List<PedidoHistorico> historico = new ArrayList<>();
+
+    @OneToMany(
+            mappedBy = "pedido",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     @Builder.Default
     private List<PedidoItem> itens = new ArrayList<>();
+
+    private LocalDateTime conferenciaEm;
+
+    private Long conferenciaPorUsuarioId;
 }

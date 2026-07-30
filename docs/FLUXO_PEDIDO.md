@@ -2,8 +2,6 @@
 
 ## Status atual do pedido
 
-Fluxo implementado:
-
 RECEBIDO
 ↓
 APROVADO
@@ -12,15 +10,34 @@ EM_PRODUCAO
 ↓
 FINALIZADO
 ↓
+AGUARDANDO_SEPARACAO
+↓
+SEPARADO
+↓
 SAIU_ENTREGA
 ↓
 ENTREGUE
 
-Cancelamento:
+- AGUARDANDO_SEPARACAO é um status de transição entre produção e entrega.
+- SEPARADO indica que o balcão conferiu e preparou o pedido para envio.
+- FINALIZADO representa que todos os setores de produção concluíram seus itens.
+- Após FINALIZADO, o pedido passa por conferência do balcão antes da separação.
 
-RECEBIDO/APROVADO/PENDENTE/EM_PRODUCAO
+PedidoItem:
+
+APROVADO
+PENDENTE
+EM_PRODUCAO
+FINALIZADO
+
 ↓
+
 CANCELADO
+
+
+Pedido:
+
+Somente será CANCELADO quando todos os itens estiverem cancelados.
 
 
 ---
@@ -48,8 +65,29 @@ Representa cada item dentro do pedido.
 Relacionamento:
 
 Pedido
-└── PedidoItem
-└── Produto
+└── N PedidoItem
+└── 1 Produto
+
+## PedidoHistorico
+
+Responsável pelo rastreamento operacional do pedido.
+
+Registra:
+
+- ação realizada
+- data/hora
+- setor responsável
+- usuário
+- descrição
+
+Exemplos:
+
+- APROVADO
+- PRODUCAO_INICIADA
+- ITEM_CANCELADO
+- FINALIZADO
+- CONFERENCIA
+- SEPARACAO
 
 
 ## Produto
@@ -107,8 +145,22 @@ Aprovar pedido
 
 Resultado:
 
-APROVADO
+Após produção finalizada:
 
+O balcão realiza:
+
+- conferência do pedido
+- validação dos itens
+- liberação para separação
+
+
+Fluxo:
+
+FINALIZADO
+↓
+CONFERÊNCIA
+↓
+AGUARDANDO_SEPARACAO
 
 ---
 
@@ -189,6 +241,49 @@ Necessita:
 }
 
 ```
+
+## 3 - Separação
+
+Responsável:
+
+Balcão
+
+
+Objetivo:
+
+Preparar o pedido para envio.
+
+
+Processo:
+
+- conferir itens
+- marcar itens separados
+- liberar pedido
+
+
+Status inicial:
+
+AGUARDANDO_SEPARACAO
+
+
+Resultado:
+
+SEPARADO
+
+Itens cancelados não participam da separação.
+
+Somente itens com status diferente de CANCELADO
+são obrigatórios para liberação.
+
+## Conferência
+
+PUT /pedidos/{id}/conferir
+
+
+## Separação
+
+PUT /pedidos/{id}/liberar-entrega
+
 ## Entrega
 
 PUT /pedidos/{id}/sair-entrega
@@ -201,50 +296,22 @@ PUT /pedidos/{id}/entregar
 # Pontos identificados para próximas sprints
 
 
-## Status por item
+## Controle operacional por item
 
-Problema atual:
+Implementado.
 
-O pedido possui apenas um status geral.
+Cada PedidoItem possui seu próprio fluxo operacional:
 
-Necessário evoluir para:
-
-Pedido
-|
-├── Item Pizza
-│      status produção
-|
-└── Item Lanche
-status produção
+- APROVADO
+- PENDENTE
+- EM_PRODUCAO
+- FINALIZADO
+- CANCELADO
 
 
 Objetivo:
 
 Permitir que setores trabalhem de forma independente.
-
-
----
-
-## Novo status futuro
-
-Substituir conceito atual:
-
-FINALIZADO
-
-
-Por:
-
-PRONTO_DESPACHO
-
-
-Motivo:
-
-Após produção terminar, o balcão ainda precisa:
-
-- separar bebidas
-- conferir pedido
-- enviar para entrega
-
 
 ---
 
@@ -256,3 +323,20 @@ Após produção terminar, o balcão ainda precisa:
 - dashboard operacional
 - impressão automática
 - integração entregadores
+
+---
+
+# Refatoração futura
+
+O PedidoService atualmente concentra várias responsabilidades.
+
+Após estabilização do MVP, avaliar separação em:
+
+- PedidoCriacaoService
+- PedidoProducaoService
+- PedidoConferenciaService
+- PedidoSeparacaoService
+- PedidoEntregaService
+- PedidoCancelamentoService
+
+

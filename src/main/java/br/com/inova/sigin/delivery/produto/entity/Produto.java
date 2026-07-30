@@ -36,4 +36,5 @@ public class Produto {
     private Boolean disponivel;
 
     private Boolean ativo;
+
 }

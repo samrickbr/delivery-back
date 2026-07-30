@@ -7,18 +7,23 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Data
-    @Builder
-    public class PedidoBalcaoResponse {
+@Builder
+public class PedidoBalcaoResponse {
 
-        private Long id;
+    private Long id;
 
-        private String clienteNome;
+    private String clienteNome;
 
-        private String status;
+    private String status;
 
-        private BigDecimal valorTotal;
+    private BigDecimal valorTotal;
 
-        private String formaPagamento;
+    private String formaPagamento;
 
-        private List<ItemOperacaoResponse> itens;
-    }
+    private Boolean aguardaConferencia;
+
+    private List<ItemOperacaoResponse> itens;
+
+    private List<PedidoHistoricoResponse> historico;
+
+}

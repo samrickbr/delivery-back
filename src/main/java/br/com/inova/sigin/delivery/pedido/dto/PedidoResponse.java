@@ -22,4 +22,6 @@ public class PedidoResponse {
 
     private String observacaoOperacao;
 
+    private List<PedidoHistoricoResponse> historico;
+
 }

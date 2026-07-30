@@ -70,6 +70,20 @@ Campos principais:
 - quantidade
 - valor_unitario
 - valor_total
+- status_operacao
+- separado
+- motivo_cancelamento
+- cancelado_em
+- cancelado_por
+
+
+Status_operacao:
+
+- APROVADO
+- PENDENTE
+- EM_PRODUCAO
+- FINALIZADO
+- CANCELADO
 
 
 Relacionamentos:
@@ -81,6 +95,51 @@ PedidoItem pertence a:
 
 
 ---
+---
+
+# PedidoHistorico
+
+Tabela:
+
+pedido_historico
+
+
+Responsável por armazenar o histórico operacional do pedido.
+
+
+Campos principais:
+
+- id
+- pedido_id
+- usuario_nome
+- setor
+- acao
+- descricao
+- data_hora
+
+
+Relacionamento:
+
+Pedido possui vários históricos.
+
+
+Relacionamento:
+
+Pedido 1:N PedidoHistorico
+
+
+Exemplos de ações:
+
+- APROVADO
+- PRODUCAO_INICIADA
+- ITEM_CANCELADO
+- FINALIZADO
+- CONFERENCIA
+- SEPARACAO
+- PEDIDO_CANCELADO
+
+---
+
 
 # Produto
 
@@ -174,36 +233,29 @@ Utilizado para direcionamento operacional dos pedidos.
 
 ```json
 Setor
-
 1
-
 |
-
 N
-
 Categoria
-
 1
-
 |
-
 N
-
 Produto
-
 1
-
 |
-
 N
-
 PedidoItem
-
 N
-
 |
-
 1
+Pedido
+
+
+Pedido
+1
+|
+N
+PedidoHistorico
 ```
 Pedido
 ---
@@ -255,78 +307,127 @@ X Salada
 
 ---
 
+---
+
+## Conferência e Separação
+
+
+Após todos os setores finalizarem:
+
+
+FINALIZADO
+
+↓
+
+Conferência do balcão
+
+↓
+
+AGUARDANDO_SEPARACAO
+
+↓
+
+SEPARADO
+
+↓
+
+SAIU_ENTREGA
+
+↓
+
+ENTREGUE
+
+
+Responsável:
+
+Balcão
+
+
+Processos:
+
+- conferir itens produzidos
+- validar cancelamentos
+- separar pedido
+- liberar entrega
+
+---
+
 # Pontos de evolução
 
 
-## Status por item
+# Controle operacional por item
 
-Problema atual:
 
-O status pertence ao pedido.
+Implementado.
+
+
+Cada PedidoItem possui seu próprio ciclo operacional.
 
 
 Exemplo:
 
+
 Pedido:
 
-- Pizza
-- Lanche
+- Pizza Calabresa
+- X Salada
 
 
-Ambos possuem o mesmo status.
+Itens podem possuir estados diferentes:
 
 
-Evolução futura:
+Pizza Calabresa:
 
-Adicionar controle individual por PedidoItem.
+FINALIZADO
 
 
-Modelo futuro:
+X Salada:
 
-Pedido
-
-|
-
-├── PedidoItem Pizza
-
-│   status_producao
-
-|
-
-└── PedidoItem Lanche
-
-    status_producao
+CANCELADO
 
 
 Objetivo:
 
-Permitir produção independente por setor.
+Permitir que setores trabalhem de forma independente.
 
 
 ---
 
 # Nova etapa futura
 
-
-Substituir:
-
-FINALIZADO
+# Evolução futura
 
 
-Por:
+Avaliar criação do status:
 
 PRONTO_DESPACHO
 
 
 Motivo:
 
-Após produção finalizar, ainda existem etapas:
 
-- separar bebidas
-- conferir pedido
-- preparar despacho
-- enviar para entrega
+Atualmente:
 
+FINALIZADO
+
+representa:
+
+- produção concluída
+- conferência realizada
+- pedido liberado
+
+
+Uma evolução futura pode separar:
+
+
+FINALIZADO
+
+↓
+
+PRONTO_DESPACHO
+
+
+para representar melhor o momento entre produção e entrega.
 
 ---
 
@@ -340,8 +441,12 @@ Implementado:
 - categorias
 - setores
 - pedidos
-- fluxo operacional
-- produção por setor
+- PedidoItem com controle operacional
+- produção independente por setor
+- pendência de produção
+- cancelamento por item
+- histórico operacional
+- conferência do balcão
+- separação
 - entrega
-- cancelamento com justificativa
 

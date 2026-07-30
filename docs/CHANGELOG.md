@@ -1,4 +1,129 @@
 # Changelog - SIGIN Delivery Backend
+---
+
+## [0.2.0] - Evolução Fluxo Operacional Delivery
+
+
+### Alterado
+
+
+## Backend
+
+Implementado aprimoramento do fluxo operacional de pedidos.
+
+
+Alterações:
+
+- Controle de status operacional por PedidoItem
+- Cancelamento individual de itens
+- Histórico operacional do pedido
+- Processo de conferência pelo balcão
+- Processo de separação antes da entrega
+- Novo status AGUARDANDO_SEPARACAO
+- Novo status SEPARADO
+
+
+---
+
+## Fluxo atualizado
+
+
+RECEBIDO
+
+↓
+
+APROVADO
+
+↓
+
+EM_PRODUCAO
+
+↓
+
+FINALIZADO
+
+↓
+
+AGUARDANDO_SEPARACAO
+
+↓
+
+SEPARADO
+
+↓
+
+SAIU_ENTREGA
+
+↓
+
+ENTREGUE
+
+
+---
+
+## Cancelamento
+
+
+Alterado fluxo de cancelamento.
+
+
+Agora:
+
+PedidoItem:
+
+- APROVADO
+- PENDENTE
+- EM_PRODUCAO
+- FINALIZADO
+
+podem ser cancelados.
+
+
+Pedido:
+
+Recebe status CANCELADO somente quando todos os itens estiverem cancelados.
+
+
+---
+
+## Frontend
+
+
+Ajustado fluxo operacional:
+
+
+- Nova etapa de conferência
+- Nova etapa de separação
+- Filtros por status atualizados
+- Validação de itens cancelados na separação
+- Liberação de entrega após separação
+
+
+---
+
+## Correções
+
+
+Corrigido fluxo onde pedidos com itens cancelados eram enviados diretamente para entrega.
+
+
+Agora:
+
+
+Produção finalizada
+
+↓
+
+Conferência
+
+↓
+
+Separação
+
+↓
+
+Entrega
+
 
 ## 22/07/2026
 

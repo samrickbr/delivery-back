@@ -6,23 +6,22 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class StatusPedidoService {
-
     public void aprovar(Pedido pedido) {
         pedido.setStatus(StatusPedido.APROVADO);
     }
-
     public void iniciarProducao(Pedido pedido) {
         pedido.setStatus(StatusPedido.EM_PRODUCAO);
     }
 
+    public void aguardarSeparacao(Pedido pedido) {
+        pedido.setStatus(StatusPedido.AGUARDANDO_SEPARACAO);
+    }
     public void sairEntrega(Pedido pedido) {
         pedido.setStatus(StatusPedido.SAIU_ENTREGA);
     }
-
     public void finalizar(Pedido pedido) {
         pedido.setStatus(StatusPedido.FINALIZADO);
     }
-
     public void cancelar(Pedido pedido) {
         pedido.setStatus(StatusPedido.CANCELADO);
     }

@@ -2,6 +2,47 @@
 
 ## Pedidos
 
+## Status atuais do pedido
+
+RECEBIDO
+
+Pedido criado aguardando aprovação.
+
+APROVADO
+
+Pedido aprovado e aguardando produção.
+
+EM_PRODUCAO
+
+Algum setor está produzindo itens.
+
+PENDENTE
+
+Produção pausada por algum motivo.
+
+FINALIZADO
+
+Todos os setores finalizaram seus itens.
+
+AGUARDANDO_SEPARACAO
+
+Pedido conferido pelo balcão aguardando montagem final.
+
+SEPARADO
+
+Pedido pronto para despacho.
+
+SAIU_ENTREGA
+
+Pedido com entregador.
+
+ENTREGUE
+
+Pedido concluído.
+
+CANCELADO
+
+Pedido encerrado por cancelamento.
 
 ---
 
@@ -35,65 +76,73 @@ RECEBIDO
   ]
 }
 ```
-Listar pedidos do balcão
+## Listar pedidos do balcão
+
 GET /pedidos/balcao
 
-Retorna pedidos aguardando aprovação.
+
+Retorna pedidos que necessitam ação do balcão.
+
 
 Status:
 
 RECEBIDO
-Aprovar pedido
-PUT /pedidos/{id}/aprovar
-
-Altera o pedido para:
-
 APROVADO
+FINALIZADO
+AGUARDANDO_SEPARACAO
 
-Listar pedidos por setor de produção
-GET /pedidos/cozinha?setor={SETOR}
+## Finalizar produção
 
-Exemplos:
+PUT /pedidos/{id}/finalizar
 
-GET /pedidos/cozinha?setor=PIZZARIA
-GET /pedidos/cozinha?setor=COZINHA
 
-Retorna pedidos em produção relacionados ao setor.
+Finaliza os itens pertencentes ao setor informado.
 
-Status considerados:
+
+Quando todos os itens estiverem:
+
+FINALIZADO
+ou
+CANCELADO
+
+
+o pedido passa para:
+
+FINALIZADO
+
+## Cancelar itens
+
+PUT /pedidos/{id}/cancelar-itens
+
+
+Cancela itens específicos do pedido.
+
+
+PedidoItem:
 
 APROVADO
 PENDENTE
 EM_PRODUCAO
-Iniciar produção
-PUT /pedidos/{id}/producao
+FINALIZADO
 
-Altera status:
+podem ser cancelados.
 
-APROVADO → EM_PRODUCAO
 
-Colocar pedido pendente
-PUT /pedidos/{id}/pendente
+Pedido:
 
-Request:
+Somente recebe status CANCELADO quando todos os itens estiverem CANCELADOS.
 
-{
-  "motivo": "Aguardando ingrediente"
-}
+## Cancelar pedido completo
 
-Altera:
+PUT /pedidos/{id}/cancelar-pedido
 
-EM_PRODUCAO → PENDENTE
 
-Finalizar produção
-PUT /pedidos/{id}/finalizar
+Cancela todos os itens e encerra o pedido.
 
-Altera:
 
-EM_PRODUCAO → FINALIZADO
+Status final:
 
-Cancelar pedido
-PUT /pedidos/{id}/cancelar
+CANCELADO
 
 Request:
 
@@ -103,21 +152,110 @@ Request:
 
 Altera:
 
-qualquer etapa permitida → CANCELADO
+PedidoItem:
 
-Listar pedidos entrega
-GET /pedidos/entrega
-
-Retorna pedidos:
-
+APROVADO
+PENDENTE
+EM_PRODUCAO
 FINALIZADO
-SAIU_ENTREGA
-Saiu para entrega
-PUT /pedidos/{id}/sair-entrega
+
+podem ser cancelados.
+
+
+Pedido:
+
+Somente recebe status CANCELADO quando todos os itens estiverem CANCELADOS.
+
+## Conferir pedido
+
+PUT /pedidos/{id}/conferir
+
+Responsável:
+
+BALCÃO
+
 
 Altera:
 
-FINALIZADO → SAIU_ENTREGA
+FINALIZADO → AGUARDANDO_SEPARACAO
+
+
+Registra:
+
+- data da conferência
+- usuário responsável
+- histórico operacional
+
+## Conferência e Separação
+
+Após todos os setores finalizarem a produção, o pedido entra no fluxo do balcão.
+
+Fluxo:
+
+FINALIZADO
+↓
+AGUARDA CONFERÊNCIA
+↓
+AGUARDANDO_SEPARACAO
+↓
+SEPARADO
+↓
+SAIU_ENTREGA
+↓
+ENTREGUE
+
+## Separar pedido
+
+PUT /pedidos/{id}/separar
+
+
+Altera:
+
+FINALIZADO → SEPARADO
+
+## Liberar entrega após separação
+
+PUT /pedidos/{id}/liberar-entrega
+
+
+Responsável:
+
+BALCÃO
+
+
+Processo:
+
+- conferir itens produzidos
+- marcar itens separados
+- validar itens cancelados
+- liberar despacho
+
+
+Altera:
+
+AGUARDANDO_SEPARACAO → SEPARADO
+
+
+Processo:
+
+- validar itens separados
+- ignorar itens cancelados
+- confirmar separação
+
+
+Altera:
+
+AGUARDANDO_SEPARACAO → SEPARADO
+
+## Listar pedidos entrega
+
+GET /pedidos/entrega
+
+
+Retorna pedidos:
+
+SEPARADO
+SAIU_ENTREGA
 
 Confirmar entrega
 PUT /pedidos/{id}/entregar
@@ -126,11 +264,29 @@ Altera:
 
 SAIU_ENTREGA → ENTREGUE
 
-Histórico
+## Histórico de pedidos
+
 GET /pedidos/finalizados
+
 
 Retorna pedidos encerrados:
 
-FINALIZADO
-SAIU_ENTREGA
+ENTREGUE
 CANCELADO
+
+
+Pedidos em operação podem ser acompanhados pelo histórico operacional:
+GET /pedidos/{id}/historico
+
+## Histórico operacional
+
+GET /pedidos/{id}/historico
+
+
+Retorna:
+
+- ações realizadas
+- setor responsável
+- usuário
+- data/hora
+- descrição

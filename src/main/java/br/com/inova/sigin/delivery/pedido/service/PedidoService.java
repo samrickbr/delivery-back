@@ -5,6 +5,8 @@ import br.com.inova.sigin.delivery.pedido.entity.Pedido;
 import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
 import br.com.inova.sigin.delivery.pedido.mapper.PedidoMapper;
 import br.com.inova.sigin.delivery.pedido.repository.PedidoRepository;
+import br.com.inova.sigin.delivery.pedidohistorico.repository.PedidoHistoricoRepository;
+import br.com.inova.sigin.delivery.pedidohistorico.service.PedidoHistoricoService;
 import br.com.inova.sigin.delivery.pedidoitem.entity.PedidoItem;
 import br.com.inova.sigin.delivery.pedidoitem.enums.StatusOperacao;
 import br.com.inova.sigin.delivery.pedidoitem.repository.PedidoItemRepository;
@@ -27,6 +29,8 @@ public class PedidoService {
     private final ProdutoRepository produtoRepository;
     private final PedidoMapper mapper;
     private final StatusPedidoService statusService;
+    private final PedidoHistoricoService historicoService;
+    private final PedidoHistoricoRepository historicoRepository;
 
 
     public PedidoResponse criar(PedidoRequest request) {
@@ -95,8 +99,16 @@ public class PedidoService {
         Pedido pedido = buscarEntidade(id);
         statusService.aprovar(pedido);
         pedido.setStatusAlteradoEm(LocalDateTime.now());
+        historicoService.registrar(
+                pedido,
+                "Sistema",
+                "BALCAO",
+                "APROVADO",
+                "Pedido aprovado."
+        );
         return salvar(pedido);
     }
+
     @Transactional
     public PedidoResponse colocarPendente(
             Long id,
@@ -109,49 +121,38 @@ public class PedidoService {
         pedido.getItens()
                 .stream()
                 .filter(item ->
-                        item.getProduto()
-                                .getCategoria()
-                                .getSetor()
-                                .getNome()
-                                .equals(setor)
+                        getSetor(item).equals(setor)
+                                && item.getStatusOperacao() != StatusOperacao.CANCELADO
                 )
-                .forEach(item -> {
+                .forEach(item ->
+                        item.setStatusOperacao(StatusOperacao.PENDENTE)
+                );
 
-                    item.setStatusOperacao(
-                            StatusOperacao.PENDENTE
-                    );
+        pedido.setObservacaoOperacao(request.getMotivo());
+        pedido.setStatusAlteradoEm(LocalDateTime.now());
 
-                });
+        repository.save(pedido);
 
-
-        pedido.setObservacaoOperacao(
+        historicoService.registrar(
+                pedido,
+                "Sistema",
+                setor,
+                "PENDENTE",
                 request.getMotivo()
         );
 
-        pedido.setStatusAlteradoEm(
-                LocalDateTime.now()
-        );
-        repository.save(pedido);
         return mapper.toResponse(pedido);
     }
 
     @Transactional
-    public PedidoResponse cancelar(
-            Long id,
-            String setor,
-            CancelamentoRequest request
-    ) {
+    public PedidoResponse cancelar( Long id, String setor, CancelamentoRequest request ) {
 
         Pedido pedido = buscarEntidade(id);
 
         pedido.getItens()
                 .stream()
                 .filter(item ->
-                        item.getProduto()
-                                .getCategoria()
-                                .getSetor()
-                                .getNome()
-                                .equals(setor)
+                        getSetor(item).equals(setor)
                 )
                 .forEach(item -> {
 
@@ -165,16 +166,11 @@ public class PedidoService {
                 pedido.getItens()
                         .stream()
                         .allMatch(item ->
-                                item.getStatusOperacao()
-                                        == StatusOperacao.CANCELADO
+                                item.getStatusOperacao() == StatusOperacao.CANCELADO
                         );
 
         if (todosCancelados) {
-
-            pedido.setStatus(
-                    StatusPedido.CANCELADO
-            );
-
+            pedido.setStatus(StatusPedido.CANCELADO);
         }
 
         pedido.setObservacaoOperacao(
@@ -185,6 +181,14 @@ public class PedidoService {
                 LocalDateTime.now()
         );
         repository.save(pedido);
+        historicoService.registrar(
+                pedido,
+                "Sistema",
+                setor,
+                "SETOR_CANCELADO",
+                "Todos os itens do setor foram cancelados. Motivo: "
+                        + request.getJustificativa()
+        );
         return mapper.toResponse(pedido);
     }
 
@@ -257,6 +261,7 @@ public class PedidoService {
                 .map(mapper::toResponse)
                 .toList();
     }
+
     public PedidoResponse sairParaEntrega(Long id) {
         Pedido pedido = buscarEntidade(id);
 
@@ -267,15 +272,22 @@ public class PedidoService {
                 repository.save(pedido)
         );
     }
+
     public PedidoResponse entregar(Long id) {
         Pedido pedido = buscarEntidade(id);
 
         pedido.setStatus(StatusPedido.ENTREGUE);
         pedido.setStatusAlteradoEm(LocalDateTime.now());
 
-        return mapper.toResponse(
-                repository.save(pedido)
+        repository.save(pedido);
+        historicoService.registrar(
+                pedido,
+                "Sistema",
+                "ENTREGA",
+                "SAIU_ENTREGA",
+                "Pedido saiu para entrega."
         );
+        return mapper.toResponse(pedido);
     }
 
     public List<PedidoResponse> listarEntregues() {
@@ -289,7 +301,8 @@ public class PedidoService {
                 .map(mapper::toResponse)
                 .toList();
     }
-    public List<PedidoOperacaoResponse> pedidosOperacaoCozinha(){
+
+    public List<PedidoOperacaoResponse> pedidosOperacaoCozinha() {
         return repository
                 .findByStatusInOrderByStatusAlteradoEmAsc(
                         List.of(
@@ -329,7 +342,8 @@ public class PedidoService {
                                 StatusPedido.APROVADO,
                                 StatusPedido.EM_PRODUCAO,
                                 StatusPedido.PENDENTE,
-                                StatusPedido.FINALIZADO
+                                StatusPedido.FINALIZADO,
+                                StatusPedido.AGUARDANDO_SEPARACAO
                         )
                 )
                 .stream()
@@ -363,6 +377,7 @@ public class PedidoService {
         boolean todosSeparados =
                 pedido.getItens()
                         .stream()
+                        .filter(item -> item.getStatusOperacao() != StatusOperacao.CANCELADO)
                         .allMatch(PedidoItem::getSeparado);
 
         if (!todosSeparados) {
@@ -372,9 +387,15 @@ public class PedidoService {
         pedido.setStatus(StatusPedido.SEPARADO);
         pedido.setStatusAlteradoEm(LocalDateTime.now());
 
-        return mapper.toResponse(
-                repository.save(pedido)
+        repository.save(pedido);
+        historicoService.registrar(
+                pedido,
+                "Sistema",
+                "BALCAO",
+                "SEPARACAO",
+                "Pedido separado e liberado para entrega."
         );
+        return mapper.toResponse(pedido);
     }
 
     @Transactional
@@ -385,16 +406,11 @@ public class PedidoService {
         pedido.getItens()
                 .stream()
                 .filter(item ->
-                        item.getProduto()
-                                .getCategoria()
-                                .getSetor()
-                                .getNome()
-                                .equals(setor)
+                        getSetor(item).equals(setor)
+                                && item.getStatusOperacao() != StatusOperacao.CANCELADO
                 )
                 .forEach(item ->
-                        item.setStatusOperacao(
-                                StatusOperacao.EM_PRODUCAO
-                        )
+                        item.setStatusOperacao(StatusOperacao.EM_PRODUCAO)
                 );
 
 
@@ -402,56 +418,203 @@ public class PedidoService {
                 LocalDateTime.now()
         );
 
+        historicoService.registrar(
+                pedido,
+                "Sistema",
+                setor,
+                "PRODUCAO_INICIADA",
+                "Produção iniciada."
+        );
         repository.save(pedido);
-
         return mapper.toResponse(pedido);
     }
 
     @Transactional
     public PedidoResponse finalizar(Long id, String setor) {
-
         Pedido pedido = buscarEntidade(id);
-
         pedido.getItens()
                 .stream()
                 .filter(item ->
-                        item.getProduto()
-                                .getCategoria()
-                                .getSetor()
-                                .getNome()
-                                .equals(setor)
+                        getSetor(item).equals(setor)
+                                && item.getStatusOperacao() != StatusOperacao.CANCELADO
                 )
                 .forEach(item ->
-                        item.setStatusOperacao(
-                                StatusOperacao.FINALIZADO
-                        )
+                        item.setStatusOperacao(StatusOperacao.FINALIZADO)
                 );
-
-
         boolean todosFinalizados =
                 pedido.getItens()
                         .stream()
                         .allMatch(item ->
-                                item.getStatusOperacao()
-                                        == StatusOperacao.FINALIZADO
+                                item.getStatusOperacao() == StatusOperacao.FINALIZADO
+                                        || item.getStatusOperacao() == StatusOperacao.CANCELADO
                         );
 
-
         if (todosFinalizados) {
+            pedido.setStatus(StatusPedido.FINALIZADO);
+        }
+        pedido.setStatusAlteradoEm(
+                LocalDateTime.now()
+        );
+        repository.save(pedido);
+        historicoService.registrar(
+                pedido,
+                "Sistema",
+                setor,
+                "FINALIZADO",
+                "Setor finalizou a produção."
+        );
+        return mapper.toResponse(pedido);
+    }
 
-            pedido.setStatus(
-                    StatusPedido.FINALIZADO
+    @Transactional
+    public PedidoResponse conferir(Long id) {
+
+        Pedido pedido = buscarEntidade(id);
+
+        pedido.setStatus(StatusPedido.AGUARDANDO_SEPARACAO);
+        pedido.setConferenciaEm(LocalDateTime.now());
+
+        // temporário até integrar com o Core
+        pedido.setConferenciaPorUsuarioId(1L);
+
+        pedido.setStatusAlteradoEm(LocalDateTime.now());
+
+        repository.save(pedido);
+        historicoService.registrar(
+                pedido,
+                "Sistema",
+                "BALCAO",
+                "CONFERENCIA",
+                "Conferência realizada."
+        );
+
+        return mapper.toResponse(pedido);
+    }
+
+    public List<PedidoHistoricoResponse> listarHistorico(Long pedidoId) {
+
+        return historicoRepository
+                .findByPedidoIdOrderByDataHoraAsc(pedidoId)
+                .stream()
+                .map(mapper::toHistoricoResponse)
+                .toList();
+    }
+
+    @Transactional
+    public PedidoResponse cancelarPedido(
+            Long id,
+            CancelamentoRequest request
+    ) {
+
+        Pedido pedido = buscarEntidade(id);
+
+        pedido.setStatus(StatusPedido.CANCELADO);
+        pedido.setStatusAlteradoEm(LocalDateTime.now());
+
+        historicoService.registrar(
+                pedido,
+                "Sistema",
+                "BALCAO",
+                "PEDIDO_CANCELADO",
+                request.getJustificativa()
+        );
+
+        return mapper.toResponse(
+                repository.save(pedido)
+        );
+    }
+
+    @Transactional
+    public PedidoResponse cancelarItens(
+            Long id,
+            String setor,
+            CancelamentoItensRequest request
+    ) {
+        Pedido pedido = buscarEntidade(id);
+
+        for (Long itemId : request.getItens()) {
+            PedidoItem item = pedido.getItens()
+                    .stream()
+                    .filter(i -> i.getId().equals(itemId))
+                    .findFirst()
+                    .orElseThrow();
+            String setorItem = getSetor(item);
+            if (!setorItem.equals(setor)
+                    && !setor.equals("BALCAO")) {
+                throw new RuntimeException(
+                        "Usuário não pode cancelar este item."
+                );
+            }
+            item.setStatusOperacao(StatusOperacao.CANCELADO);
+            item.setMotivoCancelamento(request.getJustificativa());
+            item.setCanceladoEm(LocalDateTime.now());
+            item.setCanceladoPor("Sistema");
+
+            historicoService.registrar(
+                    pedido,
+                    "Sistema",
+                    setor,
+                    "ITEM_CANCELADO",
+                    item.getQuantidade()
+                            + "x "
+                            + item.getProduto().getNome()
+                            + " - Motivo: "
+                            + request.getJustificativa()
             );
         }
+        pedido.setStatusAlteradoEm(LocalDateTime.now());
+        repository.save(pedido);
+        return mapper.toResponse(pedido);
+    }
 
+    @Transactional
+    public PedidoResponse cancelarPedidoCompleto(
+            Long id,
+            String justificativa
+    ) {
+        Pedido pedido = buscarEntidade(id);
+
+        pedido.getItens().forEach(item -> {
+            item.setStatusOperacao(StatusOperacao.CANCELADO);
+            item.setMotivoCancelamento(justificativa);
+            item.setCanceladoEm(LocalDateTime.now());
+            item.setCanceladoPor("Sistema");
+        });
+
+        pedido.setStatus(StatusPedido.CANCELADO);
 
         pedido.setStatusAlteradoEm(
                 LocalDateTime.now()
         );
 
+        historicoService.registrar(
+                pedido,
+                "Sistema",
+                "BALCAO",
+                "PEDIDO_CANCELADO",
+                justificativa
+        );
+        return mapper.toResponse(
+                repository.save(pedido)
+        );
+    }
 
-        repository.save(pedido);
+    private String getSetor(PedidoItem item) {
+        return item.getProduto()
+                .getCategoria()
+                .getSetor()
+                .getNome();
+    }
+    public List<PedidoBalcaoResponse> listarSeparacao() {
 
-        return mapper.toResponse(pedido);
+        return repository
+                .findByStatusInOrderByStatusAlteradoEmAsc(
+                        List.of(
+                                StatusPedido.AGUARDANDO_SEPARACAO
+                        )
+                )
+                .stream()
+                .map(mapper::toBalcaoResponse)
+                .toList();
     }
 }

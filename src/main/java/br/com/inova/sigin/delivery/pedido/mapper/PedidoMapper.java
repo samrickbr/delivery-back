@@ -1,13 +1,14 @@
 package br.com.inova.sigin.delivery.pedido.mapper;
 
-import br.com.inova.sigin.delivery.pedido.dto.ItemOperacaoResponse;
-import br.com.inova.sigin.delivery.pedido.dto.PedidoBalcaoResponse;
-import br.com.inova.sigin.delivery.pedido.dto.PedidoOperacaoResponse;
-import br.com.inova.sigin.delivery.pedido.dto.PedidoResponse;
+import br.com.inova.sigin.delivery.pedido.dto.*;
 import br.com.inova.sigin.delivery.pedido.entity.Pedido;
+import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
+import br.com.inova.sigin.delivery.pedidohistorico.entity.PedidoHistorico;
 import br.com.inova.sigin.delivery.pedidoitem.entity.PedidoItem;
 import br.com.inova.sigin.delivery.pedidoitem.enums.StatusOperacao;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class PedidoMapper {
@@ -57,8 +58,8 @@ public class PedidoMapper {
                 .statusOperacao(item.getStatusOperacao().name())
                 .build();
     }
-    public PedidoResponse toResponse(Pedido pedido) {
 
+    public PedidoResponse toResponse(Pedido pedido) {
         return PedidoResponse.builder()
                 .id(pedido.getId())
                 .clienteNome(pedido.getClienteNome())
@@ -71,8 +72,15 @@ public class PedidoMapper {
                                 .map(this::toOperacaoItem)
                                 .toList()
                 )
+                .historico(
+                        pedido.getHistorico()
+                                .stream()
+                                .map(this::toHistoricoResponse)
+                                .toList()
+                )
                 .build();
     }
+
     public PedidoBalcaoResponse toBalcaoResponse(Pedido pedido) {
 
         return PedidoBalcaoResponse.builder()
@@ -81,16 +89,38 @@ public class PedidoMapper {
                 .status(pedido.getStatus().name())
                 .valorTotal(pedido.getValorTotal())
                 .formaPagamento(pedido.getFormaPagamento())
+                .aguardaConferencia(
+                        precisaConferencia(pedido)
+                                && pedido.getStatus() == StatusPedido.FINALIZADO
+                )
                 .itens(
                         pedido.getItens()
                                 .stream()
                                 .map(this::toOperacaoItem)
                                 .toList()
                 )
+                .historico(
+                        pedido.getHistorico() == null
+                                ? List.of()
+                                : pedido.getHistorico()
+                                .stream()
+                                .map(this::toHistoricoResponse)
+                                .toList()
+                )
                 .build();
+
     }
 
-    public PedidoOperacaoResponse toEntregaResponse(Pedido pedido){
+    public PedidoOperacaoResponse toEntregaResponse(Pedido pedido) {
+        pedido.getItens().forEach(item ->
+                System.out.println(
+                        item.getProduto().getNome()
+                                + " -> "
+                                + item.getStatusOperacao()
+                )
+        );
+
+        System.out.println("Conferência = " + precisaConferencia(pedido));
 
         return PedidoOperacaoResponse.builder()
                 .id(pedido.getId())
@@ -107,10 +137,35 @@ public class PedidoMapper {
                 )
                 .build();
     }
+
     private String getSetor(PedidoItem item) {
         return item.getProduto()
                 .getCategoria()
                 .getSetor()
                 .getNome();
+    }
+
+    private boolean precisaConferencia(Pedido pedido) {
+
+        return pedido.getItens()
+                .stream()
+                .allMatch(item ->
+                        item.getStatusOperacao()
+                                == StatusOperacao.FINALIZADO
+                                ||
+                                item.getStatusOperacao()
+                                        == StatusOperacao.CANCELADO
+                );
+    }
+
+    public PedidoHistoricoResponse toHistoricoResponse(PedidoHistorico historico) {
+
+        return PedidoHistoricoResponse.builder()
+                .dataHora(historico.getDataHora())
+                .usuario(historico.getUsuarioNome())
+                .setor(historico.getSetor())
+                .acao(historico.getAcao())
+                .descricao(historico.getDescricao())
+                .build();
     }
 }
