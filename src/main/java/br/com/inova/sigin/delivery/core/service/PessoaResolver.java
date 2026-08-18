@@ -12,16 +12,33 @@ public class PessoaResolver {
 
     private final CoreClient coreClient;
 
-    public PessoaResponse resolver(String nome, String telefone) {
+    public PessoaResponse resolver(String nome, String documento, String telefone) {
+
+        if (documento != null && !documento.isBlank()) {
+            PessoaResponse pessoa = coreClient.buscarPessoaPorDocumento(documento);
+
+            if (pessoa != null) {
+                return pessoa;
+            }
+        }
 
         if (telefone != null && !telefone.isBlank()) {
-            return coreClient.buscarPessoaPorTelefone(telefone);
+            PessoaResponse pessoa = coreClient.buscarPessoaPorTelefone(telefone);
+
+            if (pessoa != null) {
+                return pessoa;
+            }
         }
 
         PessoaRequest request = new PessoaRequest();
         request.setNome(nome);
+        request.setDocumento(documento);
         request.setTelefone(telefone);
 
         return coreClient.criarPessoa(request);
+    }
+
+    public PessoaResponse resolver(String nome, String telefone) {
+        return resolver(nome, null, telefone);
     }
 }
