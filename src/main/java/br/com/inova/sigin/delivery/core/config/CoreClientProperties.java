@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class CoreClientProperties {
 
     private String url;
+    private Long canalVendaId;
 
     public String getUrl() {
         return url;
@@ -13,5 +14,13 @@ public class CoreClientProperties {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public Long getCanalVendaId() {
+        return canalVendaId;
+    }
+
+    public void setCanalVendaId(Long canalVendaId) {
+        this.canalVendaId = canalVendaId;
     }
 }
