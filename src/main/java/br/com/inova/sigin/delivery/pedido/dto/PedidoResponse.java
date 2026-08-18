@@ -12,7 +12,7 @@ public class PedidoResponse {
 
     private Long id;
 
-    private String clienteNome;
+    private Long clienteId;
 
     private String status;
 

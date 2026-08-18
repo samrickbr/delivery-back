@@ -24,9 +24,7 @@ public class Pedido {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String clienteNome;
-
-    private String clienteWhatsapp;
+    private Long clienteId;
 
     @Enumerated(EnumType.STRING)
     private StatusPedido status;

@@ -17,7 +17,9 @@ public class PedidoMapper {
 
         return PedidoOperacaoResponse.builder()
                 .id(pedido.getId())
-                .clienteNome(pedido.getClienteNome())
+                .clienteNome(pedido.getClienteId() != null
+                        ? String.valueOf(pedido.getClienteId())
+                        : null)
                 .status(pedido.getStatus().name())
                 .observacao(pedido.getObservacao())
                 .observacaoOperacao(pedido.getObservacaoOperacao())
@@ -62,7 +64,6 @@ public class PedidoMapper {
     public PedidoResponse toResponse(Pedido pedido) {
         return PedidoResponse.builder()
                 .id(pedido.getId())
-                .clienteNome(pedido.getClienteNome())
                 .status(pedido.getStatus().name())
                 .valorTotal(pedido.getValorTotal())
                 .observacaoOperacao(pedido.getObservacaoOperacao())
@@ -85,7 +86,9 @@ public class PedidoMapper {
 
         return PedidoBalcaoResponse.builder()
                 .id(pedido.getId())
-                .clienteNome(pedido.getClienteNome())
+                .clienteNome(pedido.getClienteId() != null
+                        ? String.valueOf(pedido.getClienteId())
+                        : null)
                 .status(pedido.getStatus().name())
                 .valorTotal(pedido.getValorTotal())
                 .formaPagamento(pedido.getFormaPagamento())
@@ -124,7 +127,9 @@ public class PedidoMapper {
 
         return PedidoOperacaoResponse.builder()
                 .id(pedido.getId())
-                .clienteNome(pedido.getClienteNome())
+                .clienteNome(pedido.getClienteId() != null
+                        ? String.valueOf(pedido.getClienteId())
+                        : null)
                 .status(pedido.getStatus().name())
                 .observacao(pedido.getObservacao())
                 .observacaoOperacao(pedido.getObservacaoOperacao())
