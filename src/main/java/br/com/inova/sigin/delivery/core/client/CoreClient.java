@@ -181,6 +181,7 @@ public class CoreClient {
 
             return restClient.post()
                     .uri("/api/delivery/clientes")
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
                     .body(request)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (requestHttp, response) -> {
