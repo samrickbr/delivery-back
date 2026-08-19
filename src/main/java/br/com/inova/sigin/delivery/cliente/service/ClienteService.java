@@ -6,7 +6,6 @@ import br.com.inova.sigin.delivery.cliente.dto.ClienteRequest;
 import br.com.inova.sigin.delivery.cliente.dto.ClienteResponse;
 import br.com.inova.sigin.delivery.core.client.CoreClient;
 import br.com.inova.sigin.delivery.core.dto.CoreLoginResponse;
-import br.com.inova.sigin.delivery.core.dto.PessoaResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +17,7 @@ public class ClienteService {
 
     public ClienteResponse criar(ClienteRequest request) {
 
-        PessoaResponse response = coreClient.cadastrarCliente(
+        var pessoa = coreClient.cadastrarCliente(
                 request.getNome(),
                 request.getTelefone(),
                 request.getCpf(),
@@ -27,32 +26,15 @@ public class ClienteService {
         );
 
         return ClienteResponse.builder()
-                .id(response.getId())
-                .nome(response.getNome())
-                .cpf(request.getCpf())
-                .telefone(response.getTelefone())
-                .email(response.getEmail())
+                .id(pessoa.getId())
+                .nome(pessoa.getNome())
+                .cpf(pessoa.getDocumento())
+                .telefone(pessoa.getTelefone())
+                .email(pessoa.getEmail())
                 .build();
     }
 
-    public ClienteResponse buscarPorCpf(String cpf) {
-
-        PessoaResponse response = coreClient.buscarPessoaPorDocumento(cpf);
-
-        if (response == null) {
-            return null;
-        }
-
-        return ClienteResponse.builder()
-                .id(response.getId())
-                .nome(response.getNome())
-                .cpf(response.getDocumento())
-                .telefone(response.getTelefone())
-                .email(response.getEmail())
-                .build();
-    }
-
-    public ClienteLoginResponse autenticar(ClienteLoginRequest request) {
+    public ClienteLoginResponse login(ClienteLoginRequest request) {
 
         CoreLoginResponse response = coreClient.autenticarCliente(
                 request.getCpf(),

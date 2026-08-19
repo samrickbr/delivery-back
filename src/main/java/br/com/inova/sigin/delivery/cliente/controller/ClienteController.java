@@ -7,35 +7,26 @@ import br.com.inova.sigin.delivery.cliente.dto.ClienteResponse;
 import br.com.inova.sigin.delivery.cliente.service.ClienteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/clientes")
+@RequestMapping("/cliente")
 @RequiredArgsConstructor
 public class ClienteController {
 
     private final ClienteService service;
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ClienteResponse criar(
+    @PostMapping("/cadastro")
+    public ClienteResponse cadastrar(
             @RequestBody @Valid ClienteRequest request
     ) {
         return service.criar(request);
-    }
-
-    @GetMapping("/cpf/{cpf}")
-    public ClienteResponse buscarPorCpf(
-            @PathVariable String cpf
-    ) {
-        return service.buscarPorCpf(cpf);
     }
 
     @PostMapping("/login")
     public ClienteLoginResponse login(
             @RequestBody @Valid ClienteLoginRequest request
     ) {
-        return service.autenticar(request);
+        return service.login(request);
     }
 }
