@@ -529,3 +529,45 @@ Após estabilização do Core:
 - migração de Setor
 
 O Delivery passará a consumir as informações do Core.
+---
+
+# P0.3 — Identificação e autenticação do cliente
+
+Implementado e validado o fluxo de cliente do Delivery integrado ao SIGIN Core.
+
+## Cadastro
+
+- Cadastro do cliente pelo Delivery.
+- CPF utilizado como identificador/login do cliente no Core.
+- Cadastro de nome, telefone, CPF, senha e e-mail opcional.
+- Associação do cliente ao perfil `CLIENTE`.
+
+## Autenticação
+
+- Login do cliente pelo CPF e senha.
+- CPF normalizado antes do envio ao Core.
+- Autenticação realizada através de `POST /auth/login`.
+- JWT retornado pelo SIGIN Core.
+- Validação realizada com CPF e senha do cliente efetivamente cadastrado.
+
+## Integração Core
+
+- Removida autenticação técnica do cadastro de cliente, pois o endpoint de Delivery do Core é público.
+- Mantida autenticação técnica para operações administrativas que consultam o Core.
+- Tratamento das mensagens de erro retornadas pelo Core.
+- `CoreIntegrationException` tratado globalmente pelo Delivery.
+
+## Validação
+
+Fluxo validado:
+
+Cliente
+→ cadastro
+→ `Usuario.login = CPF`
+→ senha
+→ login pelo CPF
+→ SIGIN Core
+→ JWT
+→ Delivery
+
+P0.3 concluído.

@@ -23,7 +23,10 @@ public class CoreClient {
     private final RestClient restClient;
     private final CoreClientProperties properties;
 
-    public CoreClient(RestClient coreRestClient, CoreClientProperties properties) {
+    public CoreClient(
+            RestClient coreRestClient,
+            CoreClientProperties properties
+    ) {
         this.restClient = coreRestClient;
         this.properties = properties;
     }
@@ -67,9 +70,11 @@ public class CoreClient {
                             .build())
                     .headers(headers -> headers.setBearerAuth(autenticar()))
                     .retrieve()
-                    .onStatus(status -> status.value() == HttpStatus.NOT_FOUND.value(),
+                    .onStatus(
+                            status -> status.value() == HttpStatus.NOT_FOUND.value(),
                             (request, response) -> {
-                            })
+                            }
+                    )
                     .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
                         throw new CoreIntegrationException(
                                 "SIGIN Core rejeitou a busca da pessoa por documento. HTTP "
@@ -103,9 +108,11 @@ public class CoreClient {
                             .build())
                     .headers(headers -> headers.setBearerAuth(autenticar()))
                     .retrieve()
-                    .onStatus(status -> status.value() == HttpStatus.NOT_FOUND.value(),
+                    .onStatus(
+                            status -> status.value() == HttpStatus.NOT_FOUND.value(),
                             (request, response) -> {
-                            })
+                            }
+                    )
                     .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
                         throw new CoreIntegrationException(
                                 "SIGIN Core rejeitou a busca da pessoa. HTTP "
@@ -170,6 +177,7 @@ public class CoreClient {
     ) {
         try {
             Map<String, Object> request = new HashMap<>();
+
             request.put("nome", nome);
             request.put("telefone", telefone);
             request.put("documento", documento);
@@ -181,7 +189,6 @@ public class CoreClient {
 
             return restClient.post()
                     .uri("/api/delivery/clientes")
-                    .headers(headers -> headers.setBearerAuth(autenticar()))
                     .body(request)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (requestHttp, response) -> {
@@ -210,16 +217,34 @@ public class CoreClient {
 
     public CoreLoginResponse autenticarCliente(String cpf, String senha) {
         try {
-            CoreLoginRequest request = new CoreLoginRequest(cpf, senha);
+            if (cpf == null || cpf.isBlank()) {
+                throw new CoreIntegrationException("CPF não informado.");
+            }
+
+            if (senha == null || senha.isBlank()) {
+                throw new CoreIntegrationException("Senha não informada.");
+            }
+
+            String login = cpf.replaceAll("\\D", "");
+
+            CoreLoginRequest request = new CoreLoginRequest(
+                    login,
+                    senha
+            );
 
             CoreLoginResponse response = restClient.post()
                     .uri("/auth/login")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                     .body(request)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (httpRequest, httpResponse) -> {
                         throw new CoreIntegrationException(
-                                "SIGIN Core rejeitou a autenticação do cliente. HTTP "
-                                        + httpResponse.getStatusCode().value()
+                                extrairMensagemErro(
+                                        httpResponse.getBody() != null
+                                                ? new String(httpResponse.getBody().readAllBytes())
+                                                : null,
+                                        "CPF ou senha inválidos."
+                                )
                         );
                     })
                     .onStatus(HttpStatusCode::is5xxServerError, (httpRequest, httpResponse) -> {
@@ -259,6 +284,7 @@ public class CoreClient {
 
             CoreLoginResponse response = restClient.post()
                     .uri("/auth/login")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                     .body(request)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (httpRequest, httpResponse) -> {
@@ -275,7 +301,9 @@ public class CoreClient {
                     })
                     .body(CoreLoginResponse.class);
 
-            if (response == null || response.getToken() == null || response.getToken().isBlank()) {
+            if (response == null
+                    || response.getToken() == null
+                    || response.getToken().isBlank()) {
                 throw new CoreIntegrationException(
                         "SIGIN Core não retornou token de autenticação."
                 );
@@ -291,5 +319,51 @@ public class CoreClient {
                     exception
             );
         }
+    }
+
+    private String extrairMensagemErro(String corpo, String mensagemPadrao) {
+        if (corpo == null || corpo.isBlank()) {
+            return mensagemPadrao;
+        }
+
+        int inicio = corpo.indexOf("\"message\"");
+
+        if (inicio >= 0) {
+            int doisPontos = corpo.indexOf(':', inicio);
+            int primeiraAspa = corpo.indexOf('"', doisPontos + 1);
+            int segundaAspa = corpo.indexOf('"', primeiraAspa + 1);
+
+            if (primeiraAspa >= 0 && segundaAspa > primeiraAspa) {
+                String mensagem = corpo.substring(
+                        primeiraAspa + 1,
+                        segundaAspa
+                );
+
+                if (!mensagem.isBlank()) {
+                    return mensagem;
+                }
+            }
+        }
+
+        int inicioMensagem = corpo.indexOf("\"mensagem\"");
+
+        if (inicioMensagem >= 0) {
+            int doisPontos = corpo.indexOf(':', inicioMensagem);
+            int primeiraAspa = corpo.indexOf('"', doisPontos + 1);
+            int segundaAspa = corpo.indexOf('"', primeiraAspa + 1);
+
+            if (primeiraAspa >= 0 && segundaAspa > primeiraAspa) {
+                String mensagem = corpo.substring(
+                        primeiraAspa + 1,
+                        segundaAspa
+                );
+
+                if (!mensagem.isBlank()) {
+                    return mensagem;
+                }
+            }
+        }
+
+        return mensagemPadrao;
     }
 }
