@@ -24,6 +24,8 @@ public class Pedido {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Long clienteId;
+
     private String clienteNome;
 
     private String clienteWhatsapp;

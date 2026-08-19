@@ -65,6 +65,7 @@ public class PedidoMapper {
                 .clienteNome(pedido.getClienteNome())
                 .status(pedido.getStatus().name())
                 .valorTotal(pedido.getValorTotal())
+                .formaPagamento(pedido.getFormaPagamento())
                 .observacaoOperacao(pedido.getObservacaoOperacao())
                 .itens(
                         pedido.getItens()

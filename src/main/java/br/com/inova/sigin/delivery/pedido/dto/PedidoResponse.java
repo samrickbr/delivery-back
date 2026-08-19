@@ -20,8 +20,9 @@ public class PedidoResponse {
 
     private BigDecimal valorTotal;
 
+    private String formaPagamento;
+
     private String observacaoOperacao;
 
     private List<PedidoHistoricoResponse> historico;
-
 }
