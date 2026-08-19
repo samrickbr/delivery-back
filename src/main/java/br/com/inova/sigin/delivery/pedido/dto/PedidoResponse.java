@@ -12,7 +12,7 @@ public class PedidoResponse {
 
     private Long id;
 
-    private Long clienteId;
+    private String clienteNome;
 
     private String status;
 
@@ -20,8 +20,9 @@ public class PedidoResponse {
 
     private BigDecimal valorTotal;
 
+    private String formaPagamento;
+
     private String observacaoOperacao;
 
     private List<PedidoHistoricoResponse> historico;
-
 }

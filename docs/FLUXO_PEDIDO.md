@@ -207,6 +207,37 @@ GET /pedidos/cozinha?setor=COZINHA
 
 POST /pedidos
 
+## Forma de pagamento
+
+O fechamento do pedido aceita o campo `formaPagamento`.
+
+Valores válidos:
+
+- PIX
+- CARTAO
+- DINHEIRO
+
+A forma de pagamento é apenas informativa nesta etapa.
+
+Não existe processamento financeiro, gateway, cobrança, confirmação
+de pagamento ou integração com provedor externo.
+
+Exemplo:
+
+POST /pedidos
+
+{
+"clienteNome": "Cliente Teste",
+"clienteWhatsapp": "42999999999",
+"observacao": "",
+"formaPagamento": "PIX",
+"itens": [
+{
+"produtoId": 1,
+"quantidade": 1
+}
+]
+}
 
 ## Aprovar
 

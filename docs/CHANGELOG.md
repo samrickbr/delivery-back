@@ -571,3 +571,12 @@ Cliente
 → Delivery
 
 P0.3 concluído.
+
+## P0.4 — Contrato de pagamento
+
+- Adicionado `formaPagamento` ao contrato existente de `POST /pedidos`.
+- Valores aceitos: `PIX`, `CARTAO` e `DINHEIRO`.
+- A informação é persistida/transportada junto ao pedido conforme o modelo existente.
+- O campo é retornado no `PedidoResponse`.
+- O pagamento permanece exclusivamente informativo nesta etapa.
+- Não foi implementado gateway ou processamento financeiro.

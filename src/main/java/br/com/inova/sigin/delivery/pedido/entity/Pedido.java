@@ -26,6 +26,10 @@ public class Pedido {
 
     private Long clienteId;
 
+    private String clienteNome;
+
+    private String clienteWhatsapp;
+
     @Enumerated(EnumType.STRING)
     private StatusPedido status;
 
