@@ -41,7 +41,6 @@ public class PedidoService {
         Pedido pedido = Pedido.builder()
                 .clienteNome(request.getClienteNome())
                 .clienteWhatsapp(request.getClienteWhatsapp())
-                .formaPagamento(request.getFormaPagamento())
                 .status(StatusPedido.RECEBIDO)
                 .valorProdutos(BigDecimal.ZERO)
                 .taxaEntrega(BigDecimal.ZERO)

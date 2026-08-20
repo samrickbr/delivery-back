@@ -13,7 +13,7 @@ public class PedidoRequest {
 
     private String observacao;
 
-    private String formaPagamento;
+    private List<PedidoPagamentoRequest> pagamentos;
 
     private String tipoRecebimento;
 
