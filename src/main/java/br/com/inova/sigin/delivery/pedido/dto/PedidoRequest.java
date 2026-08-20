@@ -15,5 +15,9 @@ public class PedidoRequest {
 
     private String formaPagamento;
 
+    private String tipoRecebimento;
+
+    private Long enderecoId;
+
     private List<PedidoItemRequest> itens;
 }

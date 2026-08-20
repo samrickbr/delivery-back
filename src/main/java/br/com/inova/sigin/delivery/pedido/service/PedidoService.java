@@ -1,5 +1,7 @@
 package br.com.inova.sigin.delivery.pedido.service;
 
+import br.com.inova.sigin.delivery.configuracao.entity.Configuracao;
+import br.com.inova.sigin.delivery.configuracao.repository.ConfiguracaoRepository;
 import br.com.inova.sigin.delivery.pedido.dto.*;
 import br.com.inova.sigin.delivery.pedido.entity.Pedido;
 import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
@@ -31,6 +33,7 @@ public class PedidoService {
     private final StatusPedidoService statusService;
     private final PedidoHistoricoService historicoService;
     private final PedidoHistoricoRepository historicoRepository;
+    private final ConfiguracaoRepository configuracaoRepository;
 
 
     public PedidoResponse criar(PedidoRequest request) {
@@ -77,8 +80,11 @@ public class PedidoService {
             itemRepository.save(item);
             total = total.add(valorItem);
         }
+        BigDecimal taxaEntrega = calcularTaxaEntrega(request);
+
         pedido.setValorProdutos(total);
-        pedido.setValorTotal(total);
+        pedido.setTaxaEntrega(taxaEntrega);
+        pedido.setValorTotal(total.add(taxaEntrega));
         pedido.setStatusAlteradoEm(LocalDateTime.now());
         return mapper.toResponse(
                 repository.save(pedido)
@@ -617,5 +623,46 @@ public class PedidoService {
                 .stream()
                 .map(mapper::toBalcaoResponse)
                 .toList();
+    }
+
+    private BigDecimal calcularTaxaEntrega(PedidoRequest request) {
+
+        if ("RETIRADA".equalsIgnoreCase(request.getTipoRecebimento())) {
+            return BigDecimal.ZERO;
+        }
+
+        if (!"ENTREGA".equalsIgnoreCase(request.getTipoRecebimento())) {
+            throw new IllegalArgumentException(
+                    "Tipo de recebimento inválido."
+            );
+        }
+
+        if (request.getEnderecoId() == null) {
+            throw new IllegalArgumentException(
+                    "Endereço é obrigatório para entrega."
+            );
+        }
+
+        Configuracao configuracao = configuracaoRepository
+                .findFirstByAtivoTrue()
+                .orElseThrow(() ->
+                        new IllegalStateException(
+                                "Configuração de entrega não encontrada."
+                        )
+                );
+
+        if (configuracao.getTaxaEntrega() == null) {
+            throw new IllegalStateException(
+                    "Taxa de entrega não configurada."
+            );
+        }
+
+        if (configuracao.getTaxaEntrega().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException(
+                    "Taxa de entrega inválida."
+            );
+        }
+
+        return configuracao.getTaxaEntrega();
     }
 }
