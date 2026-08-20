@@ -1,11 +1,7 @@
 package br.com.inova.sigin.delivery.core.client;
 
 import br.com.inova.sigin.delivery.core.config.CoreClientProperties;
-import br.com.inova.sigin.delivery.core.dto.CatalogoItemResponse;
-import br.com.inova.sigin.delivery.core.dto.CoreLoginRequest;
-import br.com.inova.sigin.delivery.core.dto.CoreLoginResponse;
-import br.com.inova.sigin.delivery.core.dto.PessoaRequest;
-import br.com.inova.sigin.delivery.core.dto.PessoaResponse;
+import br.com.inova.sigin.delivery.core.dto.*;
 import br.com.inova.sigin.delivery.core.exception.CoreIntegrationException;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
@@ -365,5 +361,100 @@ public class CoreClient {
         }
 
         return mensagemPadrao;
+    }
+
+    public CoreAuthMeResponse buscarAutenticado(String token) {
+        try {
+            return restClient.get()
+                    .uri("/auth/me")
+                    .headers(headers -> headers.setBearerAuth(extrairToken(token)))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a identidade autenticada. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao consultar a identidade. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .body(CoreAuthMeResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível consultar a identidade no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+
+    public List<PessoaEnderecoResponse> buscarEnderecos(
+            Long pessoaId,
+            String token
+    ) {
+        try {
+            return restClient.get()
+                    .uri("/pessoas/{pessoaId}/enderecos", pessoaId)
+                    .headers(headers -> headers.setBearerAuth(extrairToken(token)))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a consulta dos endereços. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao consultar os endereços. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .body(new ParameterizedTypeReference<List<PessoaEnderecoResponse>>() {
+                    });
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível consultar os endereços no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+
+    private String extrairToken(String authorization) {
+
+        if (authorization == null || authorization.isBlank()) {
+            throw new CoreIntegrationException(
+                    "Token de autenticação não informado."
+            );
+        }
+
+        if (!authorization.regionMatches(
+                true,
+                0,
+                "Bearer ",
+                0,
+                7
+        )) {
+            throw new CoreIntegrationException(
+                    "Formato de autenticação inválido."
+            );
+        }
+
+        String token = authorization.substring(7).trim();
+
+        if (token.isBlank()) {
+            throw new CoreIntegrationException(
+                    "Token de autenticação não informado."
+            );
+        }
+
+        return token;
     }
 }
