@@ -8,4 +8,6 @@ public class CoreLoginResponse {
     private String token;
 
     private String tipo;
+
+    private Long clienteId;
 }

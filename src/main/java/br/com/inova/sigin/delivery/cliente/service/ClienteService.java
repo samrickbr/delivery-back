@@ -44,6 +44,7 @@ public class ClienteService {
         return ClienteLoginResponse.builder()
                 .token(response.getToken())
                 .tipo(response.getTipo())
+                .clienteId(response.getClienteId())
                 .build();
     }
 }

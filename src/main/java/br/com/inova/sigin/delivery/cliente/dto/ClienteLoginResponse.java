@@ -8,5 +8,8 @@ import lombok.Data;
 public class ClienteLoginResponse {
 
     private String token;
+
     private String tipo;
+
+    private Long clienteId;
 }
