@@ -47,6 +47,7 @@ public class ClienteService {
                 .clienteId(response.getClienteId())
                 .build();
     }
+
     public ClienteResponse buscarAutenticado(String authorization) {
 
         CoreAuthMeResponse response =
@@ -68,27 +69,72 @@ public class ClienteService {
                 .email(pessoa.getEmail())
                 .build();
     }
+
     public List<ClienteEnderecoResponse> buscarEnderecos(
             String authorization
     ) {
-
-        CoreAuthMeResponse response =
-                coreClient.buscarAutenticado(authorization);
-
-        var pessoa = response.getPessoa();
-
-        if (pessoa == null || pessoa.getId() == null) {
-            throw new IllegalStateException(
-                    "SIGIN Core não retornou a pessoa do cliente autenticado."
-            );
-        }
-
-        return coreClient.buscarEnderecos(
-                        pessoa.getId(),
-                        authorization
-                )
+        return coreClient.listarMeusEnderecos(authorization)
                 .stream()
                 .map(ClienteEnderecoResponse::from)
                 .toList();
+    }
+
+    public ClienteEnderecoResponse criarEndereco(
+            String authorization,
+            ClienteEnderecoRequest request
+    ) {
+        return ClienteEnderecoResponse.from(
+                coreClient.criarMeuEndereco(
+                        request,
+                        authorization
+                )
+        );
+    }
+
+    public ClienteEnderecoResponse atualizarEndereco(
+            String authorization,
+            Long enderecoId,
+            ClienteEnderecoRequest request
+    ) {
+        return ClienteEnderecoResponse.from(
+                coreClient.atualizarMeuEndereco(
+                        enderecoId,
+                        request,
+                        authorization
+                )
+        );
+    }
+
+    public ClienteEnderecoResponse definirEnderecoPrincipal(
+            String authorization,
+            Long enderecoId
+    ) {
+        return ClienteEnderecoResponse.from(
+                coreClient.definirMeuEnderecoPrincipal(
+                        enderecoId,
+                        authorization
+                )
+        );
+    }
+
+    public void excluirEndereco(
+            String authorization,
+            Long enderecoId
+    ) {
+        coreClient.excluirMeuEndereco(
+                enderecoId,
+                authorization
+        );
+    }
+    public ClienteEnderecoResponse buscarEndereco(
+            String authorization,
+            Long enderecoId
+    ) {
+        return ClienteEnderecoResponse.from(
+                coreClient.buscarMeuEndereco(
+                        enderecoId,
+                        authorization
+                )
+        );
     }
 }

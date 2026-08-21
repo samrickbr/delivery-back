@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import br.com.inova.sigin.delivery.cliente.dto.ClienteEnderecoRequest;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -457,4 +459,212 @@ public class CoreClient {
 
         return token;
     }
+    public List<PessoaEnderecoResponse> listarMeusEnderecos(
+            String token
+    ) {
+        try {
+            return restClient.get()
+                    .uri("/api/delivery/clientes/meus-enderecos")
+                    .headers(headers -> headers.setBearerAuth(extrairToken(token)))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a consulta dos endereços. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao consultar os endereços. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .body(new ParameterizedTypeReference<List<PessoaEnderecoResponse>>() {
+                    });
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível consultar os endereços no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+    public PessoaEnderecoResponse criarMeuEndereco(
+            ClienteEnderecoRequest request,
+            String token
+    ) {
+        try {
+            return restClient.post()
+                    .uri("/api/delivery/clientes/meus-enderecos")
+                    .headers(headers -> headers.setBearerAuth(extrairToken(token)))
+                    .body(request)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (httpRequest, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a criação do endereço. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (httpRequest, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao criar o endereço. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .body(PessoaEnderecoResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível criar o endereço no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+    public PessoaEnderecoResponse buscarMeuEndereco(
+            Long enderecoId,
+            String token
+    ) {
+        try {
+            return restClient.get()
+                    .uri(
+                            "/api/delivery/clientes/meus-enderecos/{enderecoId}",
+                            enderecoId
+                    )
+                    .headers(headers -> headers.setBearerAuth(extrairToken(token)))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a consulta do endereço. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao consultar o endereço. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .body(PessoaEnderecoResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível consultar o endereço no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+    public PessoaEnderecoResponse atualizarMeuEndereco(
+            Long enderecoId,
+            ClienteEnderecoRequest request,
+            String token
+    ) {
+        try {
+            return restClient.put()
+                    .uri(
+                            "/api/delivery/clientes/meus-enderecos/{enderecoId}",
+                            enderecoId
+                    )
+                    .headers(headers -> headers.setBearerAuth(extrairToken(token)))
+                    .body(request)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (httpRequest, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a atualização do endereço. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (httpRequest, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao atualizar o endereço. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .body(PessoaEnderecoResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível atualizar o endereço no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+    public PessoaEnderecoResponse definirMeuEnderecoPrincipal(
+            Long enderecoId,
+            String token
+    ) {
+        try {
+            return restClient.put()
+                    .uri(
+                            "/api/delivery/clientes/meus-enderecos/{enderecoId}/principal",
+                            enderecoId
+                    )
+                    .headers(headers -> headers.setBearerAuth(extrairToken(token)))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a definição do endereço principal. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao definir o endereço principal. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .body(PessoaEnderecoResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível definir o endereço principal no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+    public void excluirMeuEndereco(
+            Long enderecoId,
+            String token
+    ) {
+        try {
+            restClient.delete()
+                    .uri(
+                            "/api/delivery/clientes/meus-enderecos/{enderecoId}",
+                            enderecoId
+                    )
+                    .headers(headers -> headers.setBearerAuth(extrairToken(token)))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a exclusão do endereço. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao excluir o endereço. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .toBodilessEntity();
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível excluir o endereço no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+
 }
