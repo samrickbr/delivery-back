@@ -272,6 +272,42 @@ public class CoreClient {
             );
         }
     }
+    public List<FormaPagamentoResponse> listarFormasPagamento() {
+        try {
+            return restClient.get()
+                    .uri("/financeiro/formas-pagamento")
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::is4xxClientError,
+                            (request, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core rejeitou a consulta das formas de pagamento. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .onStatus(
+                            HttpStatusCode::is5xxServerError,
+                            (request, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core apresentou erro interno ao consultar as formas de pagamento. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .body(new ParameterizedTypeReference<List<FormaPagamentoResponse>>() {
+                    });
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível consultar as formas de pagamento no SIGIN Core.",
+                    exception
+            );
+        }
+    }
 
     private String autenticar() {
         try {

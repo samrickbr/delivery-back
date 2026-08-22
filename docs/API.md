@@ -290,3 +290,29 @@ Retorna:
 - usuário
 - data/hora
 - descrição
+
+---
+
+## Formas de pagamento
+
+### GET /formas-pagamento
+
+Consulta as formas de pagamento oficiais disponibilizadas pelo SIGIN Core.
+
+O Delivery Back não mantém cadastro local de formas de pagamento.
+
+Integração interna:
+
+GET /financeiro/formas-pagamento
+
+Contrato:
+
+```json
+[
+  {
+    "id": 1,
+    "descricao": "PIX",
+    "ativo": true,
+    "baixaAutomatica": false
+  }
+]
