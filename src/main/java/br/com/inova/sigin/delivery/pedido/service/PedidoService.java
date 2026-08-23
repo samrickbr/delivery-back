@@ -2,6 +2,11 @@ package br.com.inova.sigin.delivery.pedido.service;
 
 import br.com.inova.sigin.delivery.configuracao.entity.Configuracao;
 import br.com.inova.sigin.delivery.configuracao.repository.ConfiguracaoRepository;
+import br.com.inova.sigin.delivery.core.client.CoreClient;
+import br.com.inova.sigin.delivery.core.config.CoreClientProperties;
+import br.com.inova.sigin.delivery.core.dto.CoreAuthMeResponse;
+import br.com.inova.sigin.delivery.core.dto.PedidoItemRequest;
+import br.com.inova.sigin.delivery.core.dto.PedidoPagamentoRequest;
 import br.com.inova.sigin.delivery.pedido.dto.*;
 import br.com.inova.sigin.delivery.pedido.entity.Pedido;
 import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
@@ -34,60 +39,99 @@ public class PedidoService {
     private final PedidoHistoricoService historicoService;
     private final PedidoHistoricoRepository historicoRepository;
     private final ConfiguracaoRepository configuracaoRepository;
+    private final CoreClient coreClient;
+    private final CoreClientProperties coreClientProperties;
 
+    public br.com.inova.sigin.delivery.core.dto.PedidoResponse criar(
+            PedidoRequest request,
+            String authorization
+    ) {
+        CoreAuthMeResponse autenticado =
+                coreClient.buscarAutenticado(authorization);
 
-    public PedidoResponse criar(PedidoRequest request) {
-
-        Pedido pedido = Pedido.builder()
-                .clienteNome(request.getClienteNome())
-                .clienteWhatsapp(request.getClienteWhatsapp())
-                .status(StatusPedido.RECEBIDO)
-                .valorProdutos(BigDecimal.ZERO)
-                .taxaEntrega(BigDecimal.ZERO)
-                .valorTotal(BigDecimal.ZERO)
-                .observacao(request.getObservacao())
-                .dataCriacao(LocalDateTime.now())
-                .statusAlteradoEm(LocalDateTime.now())
-                .build();
-
-        pedido = repository.save(pedido);
-
-        BigDecimal total = BigDecimal.ZERO;
-
-        for (PedidoItemRequest itemRequest : request.getItens()) {
-
-            Produto produto = produtoRepository.findById(
-                    itemRequest.getProdutoId()
-            ).orElseThrow();
-
-            BigDecimal valorItem =
-                    produto.getPreco()
-                            .multiply(
-                                    BigDecimal.valueOf(
-                                            itemRequest.getQuantidade()
-                                    )
-                            );
-            PedidoItem item = PedidoItem.builder()
-                    .pedido(pedido)
-                    .produto(produto)
-                    .quantidade(itemRequest.getQuantidade())
-                    .valorUnitario(produto.getPreco())
-                    .valorTotal(valorItem)
-                    .separado(false)
-                    .statusOperacao(StatusOperacao.APROVADO)
-                    .build();
-            itemRepository.save(item);
-            total = total.add(valorItem);
+        if (autenticado == null
+                || autenticado.getPessoa() == null
+                || autenticado.getPessoa().getId() == null) {
+            throw new IllegalStateException(
+                    "Não foi possível identificar o cliente autenticado."
+            );
         }
-        BigDecimal taxaEntrega = calcularTaxaEntrega(request);
 
-        pedido.setValorProdutos(total);
-        pedido.setTaxaEntrega(taxaEntrega);
-        pedido.setValorTotal(total.add(taxaEntrega));
-        pedido.setStatusAlteradoEm(LocalDateTime.now());
-        return mapper.toResponse(
-                repository.save(pedido)
-        );
+        Long clienteId = autenticado.getPessoa().getId();
+
+        if (request.getItens() == null || request.getItens().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "O pedido deve possuir pelo menos um item."
+            );
+        }
+
+        if (request.getPagamentos() == null
+                || request.getPagamentos().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "O pedido deve possuir pelo menos um pagamento."
+            );
+        }
+
+        String tipoRecebimento = request.getTipoRecebimento();
+
+        if (tipoRecebimento == null || tipoRecebimento.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Tipo de recebimento não informado."
+            );
+        }
+
+        tipoRecebimento = tipoRecebimento.trim().toUpperCase();
+
+        Long enderecoId = request.getEnderecoId();
+
+        if ("ENTREGA".equals(tipoRecebimento) && enderecoId == null) {
+            throw new IllegalArgumentException(
+                    "Endereço é obrigatório para entrega."
+            );
+        }
+
+        if ("RETIRADA".equals(tipoRecebimento)) {
+            enderecoId = null;
+        }
+
+        Long canalVendaId = coreClientProperties.getCanalVendaId();
+
+        if (canalVendaId == null) {
+            throw new IllegalStateException(
+                    "Canal de venda do Delivery não configurado."
+            );
+        }
+
+        List<PedidoItemRequest> itens = request.getItens()
+                .stream()
+                .map(item -> new PedidoItemRequest(
+                        item.getProdutoId(),
+                        item.getQuantidade()
+                ))
+                .toList();
+
+        List<PedidoPagamentoRequest> pagamentos =
+                request.getPagamentos()
+                        .stream()
+                        .map(pagamento -> new PedidoPagamentoRequest(
+                                pagamento.getFormaPagamentoId(),
+                                pagamento.getValor()
+                        ))
+                        .toList();
+
+        br.com.inova.sigin.delivery.core.dto.PedidoRequest coreRequest =
+                new br.com.inova.sigin.delivery.core.dto.PedidoRequest(
+                        clienteId,
+                        enderecoId,
+                        tipoRecebimento,
+                        canalVendaId,
+                        pagamentos,
+                        null,
+                        request.getObservacao(),
+                        itens
+                );
+
+        return coreClient.criarPedido(coreRequest);
     }
 
     public Pedido buscarEntidade(Long id) {
@@ -151,7 +195,11 @@ public class PedidoService {
     }
 
     @Transactional
-    public PedidoResponse cancelar( Long id, String setor, CancelamentoRequest request ) {
+    public PedidoResponse cancelar(
+            Long id,
+            String setor,
+            CancelamentoRequest request
+    ) {
 
         Pedido pedido = buscarEntidade(id);
 
@@ -186,7 +234,9 @@ public class PedidoService {
         pedido.setStatusAlteradoEm(
                 LocalDateTime.now()
         );
+
         repository.save(pedido);
+
         historicoService.registrar(
                 pedido,
                 "Sistema",
@@ -195,6 +245,7 @@ public class PedidoService {
                 "Todos os itens do setor foram cancelados. Motivo: "
                         + request.getJustificativa()
         );
+
         return mapper.toResponse(pedido);
     }
 
@@ -206,7 +257,8 @@ public class PedidoService {
     }
 
     public List<PedidoResponse> listarPorStatus(
-            StatusPedido status) {
+            StatusPedido status
+    ) {
         return repository.findByStatusOrderByDataCriacaoAsc(status)
                 .stream()
                 .map(mapper::toResponse)
@@ -224,7 +276,6 @@ public class PedidoService {
                                 StatusOperacao.EM_PRODUCAO
                         )
                 );
-
 
         return itens.stream()
                 .map(PedidoItem::getPedido)
@@ -286,6 +337,7 @@ public class PedidoService {
         pedido.setStatusAlteradoEm(LocalDateTime.now());
 
         repository.save(pedido);
+
         historicoService.registrar(
                 pedido,
                 "Sistema",
@@ -293,6 +345,7 @@ public class PedidoService {
                 "SAIU_ENTREGA",
                 "Pedido saiu para entrega."
         );
+
         return mapper.toResponse(pedido);
     }
 
@@ -322,9 +375,6 @@ public class PedidoService {
                 .toList();
     }
 
-    // =====================================
-    // ENTREGA - pedidos finalizados ou em rota
-    // =====================================
     public List<PedidoOperacaoResponse> listarEntregaOperacao() {
 
         return repository
@@ -360,20 +410,27 @@ public class PedidoService {
     public PedidoResponse separar(Long id) {
         Pedido pedido = repository.findById(id)
                 .orElseThrow();
+
         pedido.setStatus(StatusPedido.SEPARADO);
+
         repository.save(pedido);
+
         return mapper.toResponse(pedido);
     }
 
     @Transactional
-    public PedidoResponse liberarEntrega(Long id, SeparacaoRequest request) {
+    public PedidoResponse liberarEntrega(
+            Long id,
+            SeparacaoRequest request
+    ) {
 
         Pedido pedido = buscarEntidade(id);
 
         for (SeparacaoItemRequest itemRequest : request.getItens()) {
 
-            PedidoItem item = itemRepository.findById(itemRequest.getItemId())
-                    .orElseThrow();
+            PedidoItem item = itemRepository.findById(
+                    itemRequest.getItemId()
+            ).orElseThrow();
 
             item.setSeparado(itemRequest.getSeparado());
 
@@ -383,17 +440,22 @@ public class PedidoService {
         boolean todosSeparados =
                 pedido.getItens()
                         .stream()
-                        .filter(item -> item.getStatusOperacao() != StatusOperacao.CANCELADO)
+                        .filter(item ->
+                                item.getStatusOperacao() != StatusOperacao.CANCELADO
+                        )
                         .allMatch(PedidoItem::getSeparado);
 
         if (!todosSeparados) {
-            throw new RuntimeException("Existem itens sem separação.");
+            throw new RuntimeException(
+                    "Existem itens sem separação."
+            );
         }
 
         pedido.setStatus(StatusPedido.SEPARADO);
         pedido.setStatusAlteradoEm(LocalDateTime.now());
 
         repository.save(pedido);
+
         historicoService.registrar(
                 pedido,
                 "Sistema",
@@ -401,11 +463,15 @@ public class PedidoService {
                 "SEPARACAO",
                 "Pedido separado e liberado para entrega."
         );
+
         return mapper.toResponse(pedido);
     }
 
     @Transactional
-    public PedidoResponse iniciarProducao(Long id, String setor) {
+    public PedidoResponse iniciarProducao(
+            Long id,
+            String setor
+    ) {
 
         Pedido pedido = buscarEntidade(id);
 
@@ -419,7 +485,6 @@ public class PedidoService {
                         item.setStatusOperacao(StatusOperacao.EM_PRODUCAO)
                 );
 
-
         pedido.setStatusAlteradoEm(
                 LocalDateTime.now()
         );
@@ -431,13 +496,20 @@ public class PedidoService {
                 "PRODUCAO_INICIADA",
                 "Produção iniciada."
         );
+
         repository.save(pedido);
+
         return mapper.toResponse(pedido);
     }
 
     @Transactional
-    public PedidoResponse finalizar(Long id, String setor) {
+    public PedidoResponse finalizar(
+            Long id,
+            String setor
+    ) {
+
         Pedido pedido = buscarEntidade(id);
+
         pedido.getItens()
                 .stream()
                 .filter(item ->
@@ -447,6 +519,7 @@ public class PedidoService {
                 .forEach(item ->
                         item.setStatusOperacao(StatusOperacao.FINALIZADO)
                 );
+
         boolean todosFinalizados =
                 pedido.getItens()
                         .stream()
@@ -458,10 +531,13 @@ public class PedidoService {
         if (todosFinalizados) {
             pedido.setStatus(StatusPedido.FINALIZADO);
         }
+
         pedido.setStatusAlteradoEm(
                 LocalDateTime.now()
         );
+
         repository.save(pedido);
+
         historicoService.registrar(
                 pedido,
                 "Sistema",
@@ -469,6 +545,7 @@ public class PedidoService {
                 "FINALIZADO",
                 "Setor finalizou a produção."
         );
+
         return mapper.toResponse(pedido);
     }
 
@@ -486,6 +563,7 @@ public class PedidoService {
         pedido.setStatusAlteradoEm(LocalDateTime.now());
 
         repository.save(pedido);
+
         historicoService.registrar(
                 pedido,
                 "Sistema",
@@ -497,7 +575,9 @@ public class PedidoService {
         return mapper.toResponse(pedido);
     }
 
-    public List<PedidoHistoricoResponse> listarHistorico(Long pedidoId) {
+    public List<PedidoHistoricoResponse> listarHistorico(
+            Long pedidoId
+    ) {
 
         return historicoRepository
                 .findByPedidoIdOrderByDataHoraAsc(pedidoId)
@@ -536,24 +616,38 @@ public class PedidoService {
             String setor,
             CancelamentoItensRequest request
     ) {
+
         Pedido pedido = buscarEntidade(id);
 
         for (Long itemId : request.getItens()) {
+
             PedidoItem item = pedido.getItens()
                     .stream()
                     .filter(i -> i.getId().equals(itemId))
                     .findFirst()
                     .orElseThrow();
+
             String setorItem = getSetor(item);
+
             if (!setorItem.equals(setor)
                     && !setor.equals("BALCAO")) {
                 throw new RuntimeException(
                         "Usuário não pode cancelar este item."
                 );
             }
-            item.setStatusOperacao(StatusOperacao.CANCELADO);
-            item.setMotivoCancelamento(request.getJustificativa());
-            item.setCanceladoEm(LocalDateTime.now());
+
+            item.setStatusOperacao(
+                    StatusOperacao.CANCELADO
+            );
+
+            item.setMotivoCancelamento(
+                    request.getJustificativa()
+            );
+
+            item.setCanceladoEm(
+                    LocalDateTime.now()
+            );
+
             item.setCanceladoPor("Sistema");
 
             historicoService.registrar(
@@ -568,8 +662,11 @@ public class PedidoService {
                             + request.getJustificativa()
             );
         }
+
         pedido.setStatusAlteradoEm(LocalDateTime.now());
+
         repository.save(pedido);
+
         return mapper.toResponse(pedido);
     }
 
@@ -578,12 +675,22 @@ public class PedidoService {
             Long id,
             String justificativa
     ) {
+
         Pedido pedido = buscarEntidade(id);
 
         pedido.getItens().forEach(item -> {
-            item.setStatusOperacao(StatusOperacao.CANCELADO);
-            item.setMotivoCancelamento(justificativa);
-            item.setCanceladoEm(LocalDateTime.now());
+            item.setStatusOperacao(
+                    StatusOperacao.CANCELADO
+            );
+
+            item.setMotivoCancelamento(
+                    justificativa
+            );
+
+            item.setCanceladoEm(
+                    LocalDateTime.now()
+            );
+
             item.setCanceladoPor("Sistema");
         });
 
@@ -600,6 +707,7 @@ public class PedidoService {
                 "PEDIDO_CANCELADO",
                 justificativa
         );
+
         return mapper.toResponse(
                 repository.save(pedido)
         );
@@ -611,6 +719,7 @@ public class PedidoService {
                 .getSetor()
                 .getNome();
     }
+
     public List<PedidoBalcaoResponse> listarSeparacao() {
 
         return repository
@@ -624,13 +733,19 @@ public class PedidoService {
                 .toList();
     }
 
-    private BigDecimal calcularTaxaEntrega(PedidoRequest request) {
+    private BigDecimal calcularTaxaEntrega(
+            PedidoRequest request
+    ) {
 
-        if ("RETIRADA".equalsIgnoreCase(request.getTipoRecebimento())) {
+        if ("RETIRADA".equalsIgnoreCase(
+                request.getTipoRecebimento()
+        )) {
             return BigDecimal.ZERO;
         }
 
-        if (!"ENTREGA".equalsIgnoreCase(request.getTipoRecebimento())) {
+        if (!"ENTREGA".equalsIgnoreCase(
+                request.getTipoRecebimento()
+        )) {
             throw new IllegalArgumentException(
                     "Tipo de recebimento inválido."
             );
@@ -656,7 +771,8 @@ public class PedidoService {
             );
         }
 
-        if (configuracao.getTaxaEntrega().compareTo(BigDecimal.ZERO) < 0) {
+        if (configuracao.getTaxaEntrega()
+                .compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalStateException(
                     "Taxa de entrega inválida."
             );

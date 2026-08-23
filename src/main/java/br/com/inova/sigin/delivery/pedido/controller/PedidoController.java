@@ -1,205 +1,202 @@
 package br.com.inova.sigin.delivery.pedido.controller;
 
-import br.com.inova.sigin.delivery.pedido.dto.*;
-import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
+import br.com.inova.sigin.delivery.pedido.dto.CancelamentoItensRequest;
+import br.com.inova.sigin.delivery.pedido.dto.CancelamentoRequest;
+import br.com.inova.sigin.delivery.pedido.dto.PedidoBalcaoResponse;
+import br.com.inova.sigin.delivery.pedido.dto.PedidoHistoricoResponse;
+import br.com.inova.sigin.delivery.pedido.dto.PedidoOperacaoResponse;
+import br.com.inova.sigin.delivery.pedido.dto.PedidoPendenciaRequest;
+import br.com.inova.sigin.delivery.pedido.dto.PedidoRequest;
+import br.com.inova.sigin.delivery.pedido.dto.SeparacaoRequest;
 import br.com.inova.sigin.delivery.pedido.service.PedidoService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 @RestController
 @RequestMapping("/pedidos")
-@RequiredArgsConstructor
 public class PedidoController {
 
     private final PedidoService service;
 
-    @PostMapping
-    public PedidoResponse criar(
-            @RequestBody PedidoRequest request) {
-        return service.criar(request);
+    public PedidoController(PedidoService service) {
+        this.service = service;
     }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public br.com.inova.sigin.delivery.core.dto.PedidoResponse criar(
+            @RequestHeader("Authorization") String authorization,
+            @RequestBody PedidoRequest request
+    ) {
+        return service.criar(request, authorization);
+    }
+
     @PutMapping("/{id}/aprovar")
-    public PedidoResponse aprovar(@PathVariable Long id) {
+    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse aprovar(
+            @PathVariable Long id
+    ) {
         return service.aprovar(id);
     }
-    @PutMapping("/{id}/pendente")
-    public ResponseEntity<PedidoResponse> colocarPendente(
+
+    @PutMapping("/{id}/pendente/{setor}")
+    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse colocarPendente(
             @PathVariable Long id,
-            @RequestParam String setor,
+            @PathVariable String setor,
             @RequestBody PedidoPendenciaRequest request
     ) {
-        return ResponseEntity.ok(
-                service.colocarPendente(id, setor, request)
-        );
-    }
-    @PutMapping("/{id}/producao")
-    public ResponseEntity<PedidoResponse> iniciarProducao(
-            @PathVariable Long id,
-            @RequestParam String setor
-    ) {
-        return ResponseEntity.ok(
-                service.iniciarProducao(id, setor)
-        );
+        return service.colocarPendente(id, setor, request);
     }
 
-    @PutMapping("/{id}/finalizar")
-    public ResponseEntity<PedidoResponse> finalizar(
+    @PutMapping("/{id}/cancelar/{setor}")
+    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse cancelar(
             @PathVariable Long id,
-            @RequestParam String setor
-    ) {
-        return ResponseEntity.ok(
-                service.finalizar(id, setor)
-        );
-    }
-    @PutMapping("/{id}/cancelar")
-    public ResponseEntity<PedidoResponse> cancelar(
-            @PathVariable Long id,
-            @RequestParam String setor,
+            @PathVariable String setor,
             @RequestBody CancelamentoRequest request
-    )
-    {
-        return ResponseEntity.ok(
-                service.cancelar(id, setor, request)
-        );
+    ) {
+        return service.cancelar(id, setor, request);
     }
-    @GetMapping
-    public List<PedidoResponse> listar() {
 
+    @GetMapping
+    public List<br.com.inova.sigin.delivery.pedido.dto.PedidoResponse> listar() {
         return service.listar();
     }
-    @GetMapping("/status/{status}")
-    public List<PedidoResponse> listarPorStatus(
-            @PathVariable StatusPedido status) {
 
+    @GetMapping("/status/{status}")
+    public List<br.com.inova.sigin.delivery.pedido.dto.PedidoResponse> listarPorStatus(
+            @PathVariable StatusPedido status
+    ) {
         return service.listarPorStatus(status);
     }
+
     @GetMapping("/cozinha")
-    public ResponseEntity<List<PedidoOperacaoResponse>> cozinha(
+    public List<PedidoOperacaoResponse> pedidosCozinha(
             @RequestParam String setor
     ) {
-        return ResponseEntity.ok(
-                service.pedidosCozinha(setor)
-        );
+        return service.pedidosCozinha(setor);
     }
+
     @GetMapping("/finalizados")
-    public ResponseEntity<List<PedidoResponse>> listarFinalizados() {
-        return ResponseEntity.ok(
-                service.listarFinalizados()
-        );
+    public List<br.com.inova.sigin.delivery.pedido.dto.PedidoResponse> listarFinalizados() {
+        return service.listarFinalizados();
     }
+
     @GetMapping("/entrega")
-    public ResponseEntity<List<PedidoResponse>> listarEntrega() {
-        return ResponseEntity.ok(
-                service.listarEntrega()
-        );
+    public List<br.com.inova.sigin.delivery.pedido.dto.PedidoResponse> listarEntrega() {
+        return service.listarEntrega();
     }
+
     @PutMapping("/{id}/sair-entrega")
-    public ResponseEntity<PedidoResponse> sairEntrega(
+    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse sairParaEntrega(
             @PathVariable Long id
     ) {
-        return ResponseEntity.ok(
-                service.sairParaEntrega(id)
-        );
+        return service.sairParaEntrega(id);
     }
+
     @PutMapping("/{id}/entregar")
-    public ResponseEntity<PedidoResponse> entregar(
+    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse entregar(
             @PathVariable Long id
     ) {
-        return ResponseEntity.ok(
-                service.entregar(id)
-        );
+        return service.entregar(id);
     }
+
     @GetMapping("/entregues")
-    public ResponseEntity<List<PedidoResponse>> listarEntregues() {
-        return ResponseEntity.ok(
-                service.listarEntregues()
-        );
+    public List<br.com.inova.sigin.delivery.pedido.dto.PedidoResponse> listarEntregues() {
+        return service.listarEntregues();
     }
-    @GetMapping("/cozinha-operacao")
-    public List<PedidoOperacaoResponse> cozinhaOperacao() {
+
+    @GetMapping("/operacao/cozinha")
+    public List<PedidoOperacaoResponse> pedidosOperacaoCozinha() {
         return service.pedidosOperacaoCozinha();
     }
-    @GetMapping("/entrega-operacao")
-    public ResponseEntity<List<PedidoOperacaoResponse>> listarEntregaOperacao() {
-        return ResponseEntity.ok(
-                service.listarEntregaOperacao()
-        );
+
+    @GetMapping("/operacao/entrega")
+    public List<PedidoOperacaoResponse> listarEntregaOperacao() {
+        return service.listarEntregaOperacao();
     }
+
     @GetMapping("/balcao")
-    public ResponseEntity<List<PedidoBalcaoResponse>> balcao() {
-        return ResponseEntity.ok(
-                service.listarBalcao()
-        );
+    public List<PedidoBalcaoResponse> listarBalcao() {
+        return service.listarBalcao();
     }
 
     @PutMapping("/{id}/separar")
-    public ResponseEntity<PedidoResponse> separar(
-            @PathVariable Long id,
-            @RequestBody SeparacaoRequest request
+    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse separar(
+            @PathVariable Long id
     ) {
-        return ResponseEntity.ok(
-                service.liberarEntrega(id, request)
-        );
+        return service.separar(id);
     }
 
     @PutMapping("/{id}/liberar-entrega")
-    public ResponseEntity<PedidoResponse> liberarEntrega(
+    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse liberarEntrega(
             @PathVariable Long id,
             @RequestBody SeparacaoRequest request
     ) {
-        return ResponseEntity.ok(
-                service.liberarEntrega(id, request)
-        );
+        return service.liberarEntrega(id, request);
     }
+
+    @PutMapping("/{id}/iniciar-producao/{setor}")
+    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse iniciarProducao(
+            @PathVariable Long id,
+            @PathVariable String setor
+    ) {
+        return service.iniciarProducao(id, setor);
+    }
+
+    @PutMapping("/{id}/finalizar/{setor}")
+    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse finalizar(
+            @PathVariable Long id,
+            @PathVariable String setor
+    ) {
+        return service.finalizar(id, setor);
+    }
+
     @PutMapping("/{id}/conferir")
-    public ResponseEntity<PedidoResponse> conferir(
+    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse conferir(
             @PathVariable Long id
     ) {
-        return ResponseEntity.ok(
-                service.conferir(id)
-        );
+        return service.conferir(id);
     }
+
     @GetMapping("/{id}/historico")
-    public ResponseEntity<List<PedidoHistoricoResponse>> historico(
+    public List<PedidoHistoricoResponse> listarHistorico(
             @PathVariable Long id
     ) {
-        return ResponseEntity.ok(
-                service.listarHistorico(id)
-        );
+        return service.listarHistorico(id);
     }
 
     @PutMapping("/{id}/cancelar-pedido")
-    public ResponseEntity<PedidoResponse> cancelarPedido(
+    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse cancelarPedido(
             @PathVariable Long id,
             @RequestBody CancelamentoRequest request
     ) {
-        return ResponseEntity.ok(
-                service.cancelarPedido(id, request)
-        );
+        return service.cancelarPedido(id, request);
     }
-    @PutMapping("/{id}/cancelar-itens")
-    public ResponseEntity<PedidoResponse> cancelarItens(
+
+    @PutMapping("/{id}/cancelar-itens/{setor}")
+    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse cancelarItens(
             @PathVariable Long id,
-            @RequestParam String setor,
+            @PathVariable String setor,
             @RequestBody CancelamentoItensRequest request
     ) {
-        return ResponseEntity.ok(
-                service.cancelarItens(id, setor, request)
-        );
+        return service.cancelarItens(id, setor, request);
     }
+
     @PutMapping("/{id}/cancelar-completo")
-    public ResponseEntity<PedidoResponse> cancelarCompleto(
+    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse cancelarPedidoCompleto(
             @PathVariable Long id,
             @RequestBody CancelamentoRequest request
     ) {
-
-        return ResponseEntity.ok(
-                service.cancelarPedidoCompleto(
-                        id,
-                        request.getJustificativa()
-                )
+        return service.cancelarPedidoCompleto(
+                id,
+                request.getJustificativa()
         );
+    }
+
+    @GetMapping("/separacao")
+    public List<PedidoBalcaoResponse> listarSeparacao() {
+        return service.listarSeparacao();
     }
 }

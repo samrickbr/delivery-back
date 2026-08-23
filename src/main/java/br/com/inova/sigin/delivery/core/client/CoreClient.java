@@ -212,6 +212,36 @@ public class CoreClient {
             );
         }
     }
+    public PedidoResponse criarPedido(PedidoRequest request) {
+        try {
+            return restClient.post()
+                    .uri("/pedidos")
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .body(request)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (httpRequest, httpResponse) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a criação do pedido. HTTP "
+                                        + httpResponse.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (httpRequest, httpResponse) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao criar o pedido. HTTP "
+                                        + httpResponse.getStatusCode().value()
+                        );
+                    })
+                    .body(PedidoResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível criar o pedido no SIGIN Core.",
+                    exception
+            );
+        }
+    }
 
     public CoreLoginResponse autenticarCliente(String cpf, String senha) {
         try {
