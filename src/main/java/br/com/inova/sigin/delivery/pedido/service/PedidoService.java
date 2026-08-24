@@ -126,7 +126,6 @@ public class PedidoService {
                         tipoRecebimento,
                         canalVendaId,
                         pagamentos,
-                        null,
                         request.getObservacao(),
                         itens
                 );

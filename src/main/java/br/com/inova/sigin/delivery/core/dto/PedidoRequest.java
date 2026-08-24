@@ -9,7 +9,6 @@ public record PedidoRequest(
         String tipoRecebimento,
         Long canalVendaId,
         List<PedidoPagamentoRequest> pagamentos,
-        BigDecimal taxaEntrega,
         String observacao,
         List<PedidoItemRequest> itens
 ) {
