@@ -1,13 +1,6 @@
 package br.com.inova.sigin.delivery.pedido.controller;
 
-import br.com.inova.sigin.delivery.pedido.dto.CancelamentoItensRequest;
-import br.com.inova.sigin.delivery.pedido.dto.CancelamentoRequest;
-import br.com.inova.sigin.delivery.pedido.dto.PedidoBalcaoResponse;
-import br.com.inova.sigin.delivery.pedido.dto.PedidoHistoricoResponse;
-import br.com.inova.sigin.delivery.pedido.dto.PedidoOperacaoResponse;
-import br.com.inova.sigin.delivery.pedido.dto.PedidoPendenciaRequest;
-import br.com.inova.sigin.delivery.pedido.dto.PedidoRequest;
-import br.com.inova.sigin.delivery.pedido.dto.SeparacaoRequest;
+import br.com.inova.sigin.delivery.pedido.dto.*;
 import br.com.inova.sigin.delivery.pedido.service.PedidoService;
 import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
 import org.springframework.http.HttpStatus;
@@ -27,7 +20,7 @@ public class PedidoController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public br.com.inova.sigin.delivery.core.dto.PedidoResponse criar(
+    public PedidoResponse criar(
             @RequestHeader("Authorization") String authorization,
             @RequestBody PedidoRequest request
     ) {

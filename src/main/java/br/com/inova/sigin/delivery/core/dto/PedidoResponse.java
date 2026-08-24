@@ -9,6 +9,7 @@ public record PedidoResponse(
         String numero,
         Long clienteId,
         Object cliente,
+        String clienteWhatsapp,
         Object endereco,
         String tipoRecebimento,
         Long canalVendaId,

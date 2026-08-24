@@ -13,7 +13,10 @@ import java.util.List;
 @Component
 public class PedidoMapper {
 
-    public PedidoOperacaoResponse toOperacaoResponse(Pedido pedido, String setor) {
+    public PedidoOperacaoResponse toOperacaoResponse(
+            Pedido pedido,
+            String setor
+    ) {
 
         return PedidoOperacaoResponse.builder()
                 .id(pedido.getId())
@@ -26,15 +29,12 @@ public class PedidoMapper {
                         pedido.getItens()
                                 .stream()
                                 .filter(item ->
-                                        setor != null &&
-                                                setor.equals(
-                                                        item.getProduto()
-                                                                .getCategoria()
-                                                                .getSetor()
-                                                                .getNome()
-                                                ) &&
-                                                item.getStatusOperacao() != StatusOperacao.FINALIZADO &&
-                                                item.getStatusOperacao() != StatusOperacao.CANCELADO
+                                        setor != null
+                                                && setor.equals(item.getSetor())
+                                                && item.getStatusOperacao()
+                                                != StatusOperacao.FINALIZADO
+                                                && item.getStatusOperacao()
+                                                != StatusOperacao.CANCELADO
                                 )
                                 .map(this::toOperacaoItem)
                                 .toList()
@@ -46,20 +46,16 @@ public class PedidoMapper {
 
         return ItemOperacaoResponse.builder()
                 .id(item.getId())
-                .produto(item.getProduto().getNome())
+                .produto(item.getProdutoNome())
                 .quantidade(item.getQuantidade())
-                .categoria(item.getProduto().getCategoria().getNome())
-                .setor(
-                        item.getProduto()
-                                .getCategoria()
-                                .getSetor()
-                                .getNome()
-                )
+                .categoria(null)
+                .setor(item.getSetor())
                 .statusOperacao(item.getStatusOperacao().name())
                 .build();
     }
 
     public PedidoResponse toResponse(Pedido pedido) {
+
         return PedidoResponse.builder()
                 .id(pedido.getId())
                 .clienteNome(pedido.getClienteNome())
@@ -113,15 +109,6 @@ public class PedidoMapper {
     }
 
     public PedidoOperacaoResponse toEntregaResponse(Pedido pedido) {
-        pedido.getItens().forEach(item ->
-                System.out.println(
-                        item.getProduto().getNome()
-                                + " -> "
-                                + item.getStatusOperacao()
-                )
-        );
-
-        System.out.println("Conferência = " + precisaConferencia(pedido));
 
         return PedidoOperacaoResponse.builder()
                 .id(pedido.getId())
@@ -139,13 +126,6 @@ public class PedidoMapper {
                 .build();
     }
 
-    private String getSetor(PedidoItem item) {
-        return item.getProduto()
-                .getCategoria()
-                .getSetor()
-                .getNome();
-    }
-
     private boolean precisaConferencia(Pedido pedido) {
 
         return pedido.getItens()
@@ -159,7 +139,9 @@ public class PedidoMapper {
                 );
     }
 
-    public PedidoHistoricoResponse toHistoricoResponse(PedidoHistorico historico) {
+    public PedidoHistoricoResponse toHistoricoResponse(
+            PedidoHistorico historico
+    ) {
 
         return PedidoHistoricoResponse.builder()
                 .dataHora(historico.getDataHora())

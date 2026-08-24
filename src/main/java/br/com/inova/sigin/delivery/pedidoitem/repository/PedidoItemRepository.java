@@ -11,10 +11,8 @@ public interface PedidoItemRepository
 
     List<PedidoItem> findByPedidoId(Long pedidoId);
 
-
-    List<PedidoItem> findByProdutoCategoriaSetorNomeAndStatusOperacaoIn(
+    List<PedidoItem> findBySetorAndStatusOperacaoIn(
             String setor,
             List<StatusOperacao> status
     );
-
 }

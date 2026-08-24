@@ -39,6 +39,13 @@ public class Pedido {
 
     private String clienteNome;
 
+    /**
+     * Mantido neste momento por compatibilidade com o fluxo
+     * operacional existente.
+     *
+     * O valor vem do telefone oficial do cliente no SIGIN Core.
+     */
+    @Column(nullable = false)
     private String clienteWhatsapp;
 
     private String tipoRecebimento;

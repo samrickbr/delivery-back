@@ -2,7 +2,6 @@ package br.com.inova.sigin.delivery.pedidoitem.entity;
 
 import br.com.inova.sigin.delivery.pedido.entity.Pedido;
 import br.com.inova.sigin.delivery.pedidoitem.enums.StatusOperacao;
-import br.com.inova.sigin.delivery.produto.entity.Produto;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,9 +25,18 @@ public class PedidoItem {
     @JoinColumn(name = "pedido_id")
     private Pedido pedido;
 
-    @ManyToOne
-    @JoinColumn(name = "produto_id")
-    private Produto produto;
+    /**
+     * Referência técnica ao produto oficial do SIGIN Core.
+     *
+     * O Delivery não mantém relacionamento com Produto local.
+     */
+    @Column(name = "core_produto_id", nullable = false)
+    private Long coreProdutoId;
+
+    /**
+     * Snapshot do nome do produto retornado pelo Core.
+     */
+    private String produtoNome;
 
     private Integer quantidade;
 
@@ -36,9 +44,15 @@ public class PedidoItem {
 
     private BigDecimal valorTotal;
 
+    /**
+     * Snapshot do setor retornado pelo SIGIN Core.
+     */
+    private String setor;
+
     // ==========================================
     // CHECKLIST DE SEPARAÇÃO
     // ==========================================
+
     @Builder.Default
     private Boolean separado = false;
 

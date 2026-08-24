@@ -220,15 +220,45 @@ public class CoreClient {
                     .body(request)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (httpRequest, httpResponse) -> {
+                        String corpo = "";
+
+                        try {
+                            if (httpResponse.getBody() != null) {
+                                corpo = new String(
+                                        httpResponse.getBody().readAllBytes(),
+                                        java.nio.charset.StandardCharsets.UTF_8
+                                );
+                            }
+                        } catch (Exception ignored) {
+                        }
+
                         throw new CoreIntegrationException(
-                                "SIGIN Core rejeitou a criação do pedido. HTTP "
-                                        + httpResponse.getStatusCode().value()
+                                extrairMensagemErro(
+                                        corpo,
+                                        "SIGIN Core rejeitou a criação do pedido. HTTP "
+                                                + httpResponse.getStatusCode().value()
+                                )
                         );
                     })
                     .onStatus(HttpStatusCode::is5xxServerError, (httpRequest, httpResponse) -> {
+                        String corpo = "";
+
+                        try {
+                            if (httpResponse.getBody() != null) {
+                                corpo = new String(
+                                        httpResponse.getBody().readAllBytes(),
+                                        java.nio.charset.StandardCharsets.UTF_8
+                                );
+                            }
+                        } catch (Exception ignored) {
+                        }
+
                         throw new CoreIntegrationException(
-                                "SIGIN Core apresentou erro interno ao criar o pedido. HTTP "
-                                        + httpResponse.getStatusCode().value()
+                                extrairMensagemErro(
+                                        corpo,
+                                        "SIGIN Core apresentou erro interno ao criar o pedido. HTTP "
+                                                + httpResponse.getStatusCode().value()
+                                )
                         );
                     })
                     .body(PedidoResponse.class);

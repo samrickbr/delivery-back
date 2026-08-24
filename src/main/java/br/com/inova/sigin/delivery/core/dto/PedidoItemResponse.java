@@ -8,6 +8,7 @@ public record PedidoItemResponse(
         String produto,
         BigDecimal quantidade,
         BigDecimal valorUnitario,
-        BigDecimal valorTotal
+        BigDecimal valorTotal,
+        String setor
 ) {
 }

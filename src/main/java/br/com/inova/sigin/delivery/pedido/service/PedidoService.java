@@ -17,7 +17,6 @@ import br.com.inova.sigin.delivery.pedidohistorico.service.PedidoHistoricoServic
 import br.com.inova.sigin.delivery.pedidoitem.entity.PedidoItem;
 import br.com.inova.sigin.delivery.pedidoitem.enums.StatusOperacao;
 import br.com.inova.sigin.delivery.pedidoitem.repository.PedidoItemRepository;
-import br.com.inova.sigin.delivery.produto.entity.Produto;
 import br.com.inova.sigin.delivery.produto.repository.ProdutoRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -41,8 +40,9 @@ public class PedidoService {
     private final ConfiguracaoRepository configuracaoRepository;
     private final CoreClient coreClient;
     private final CoreClientProperties coreClientProperties;
+    private final PedidoProjecaoService pedidoProjecaoService;
 
-    public br.com.inova.sigin.delivery.core.dto.PedidoResponse criar(
+    public PedidoResponse criar(
             PedidoRequest request,
             String authorization
     ) {
@@ -130,7 +130,13 @@ public class PedidoService {
                         itens
                 );
 
-        return coreClient.criarPedido(coreRequest);
+        br.com.inova.sigin.delivery.core.dto.PedidoResponse coreResponse =
+                coreClient.criarPedido(coreRequest);
+
+        return pedidoProjecaoService.projetar(
+                coreResponse,
+                autenticado.getPessoa().getTelefone()
+        );
     }
 
     public Pedido buscarEntidade(Long id) {
@@ -267,7 +273,7 @@ public class PedidoService {
     public List<PedidoOperacaoResponse> pedidosCozinha(String setor) {
 
         List<PedidoItem> itens =
-                itemRepository.findByProdutoCategoriaSetorNomeAndStatusOperacaoIn(
+                itemRepository.findBySetorAndStatusOperacaoIn(
                         setor,
                         List.of(
                                 StatusOperacao.APROVADO,
@@ -320,6 +326,12 @@ public class PedidoService {
 
     public PedidoResponse sairParaEntrega(Long id) {
         Pedido pedido = buscarEntidade(id);
+
+        if ("RETIRADA".equalsIgnoreCase(pedido.getTipoRecebimento())) {
+            throw new IllegalStateException(
+                    "Pedido de retirada não pode sair para entrega."
+            );
+        }
 
         pedido.setStatus(StatusPedido.SAIU_ENTREGA);
         pedido.setStatusAlteradoEm(LocalDateTime.now());
@@ -656,7 +668,7 @@ public class PedidoService {
                     "ITEM_CANCELADO",
                     item.getQuantidade()
                             + "x "
-                            + item.getProduto().getNome()
+                            + item.getProdutoNome()
                             + " - Motivo: "
                             + request.getJustificativa()
             );
@@ -713,10 +725,7 @@ public class PedidoService {
     }
 
     private String getSetor(PedidoItem item) {
-        return item.getProduto()
-                .getCategoria()
-                .getSetor()
-                .getNome();
+        return item.getSetor();
     }
 
     public List<PedidoBalcaoResponse> listarSeparacao() {

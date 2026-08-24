@@ -8,8 +8,6 @@ import br.com.inova.sigin.delivery.pedido.mapper.PedidoMapper;
 import br.com.inova.sigin.delivery.pedido.repository.PedidoRepository;
 import br.com.inova.sigin.delivery.pedidoitem.entity.PedidoItem;
 import br.com.inova.sigin.delivery.pedidoitem.enums.StatusOperacao;
-import br.com.inova.sigin.delivery.produto.entity.Produto;
-import br.com.inova.sigin.delivery.produto.repository.ProdutoRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,12 +20,12 @@ import java.time.LocalDateTime;
 public class PedidoProjecaoService {
 
     private final PedidoRepository pedidoRepository;
-    private final ProdutoRepository produtoRepository;
     private final PedidoMapper pedidoMapper;
 
     @Transactional
     public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse projetar(
-            PedidoResponse coreResponse
+            PedidoResponse coreResponse,
+            String clienteWhatsapp
     ) {
 
         if (coreResponse == null || coreResponse.id() == null) {
@@ -56,6 +54,7 @@ public class PedidoProjecaoService {
                 .corePedidoId(coreResponse.id())
                 .clienteId(coreResponse.clienteId())
                 .clienteNome(extrairClienteNome(coreResponse))
+                .clienteWhatsapp(clienteWhatsapp)
                 .tipoRecebimento(coreResponse.tipoRecebimento())
                 .status(StatusPedido.RECEBIDO)
                 .valorProdutos(coreResponse.valorProdutos())
@@ -92,23 +91,16 @@ public class PedidoProjecaoService {
             );
         }
 
-        Produto produto = produtoRepository
-                .findById(coreItem.produtoId())
-                .orElseThrow(() ->
-                        new IllegalStateException(
-                                "Produto local não encontrado para o produto Core "
-                                        + coreItem.produtoId()
-                        )
-                );
-
         return PedidoItem.builder()
                 .pedido(pedido)
-                .produto(produto)
+                .coreProdutoId(coreItem.produtoId())
+                .produtoNome(coreItem.produto())
                 .quantidade(
                         converterQuantidade(coreItem.quantidade())
                 )
                 .valorUnitario(coreItem.valorUnitario())
                 .valorTotal(coreItem.valorTotal())
+                .setor(coreItem.setor())
                 .separado(false)
                 .statusOperacao(StatusOperacao.PENDENTE)
                 .build();
