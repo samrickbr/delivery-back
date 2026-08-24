@@ -12,7 +12,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "pedido")
+@Table(
+        name = "pedido",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_pedido_core_pedido_id",
+                        columnNames = "core_pedido_id"
+                )
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,11 +32,16 @@ public class Pedido {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "core_pedido_id", nullable = false)
+    private Long corePedidoId;
+
     private Long clienteId;
 
     private String clienteNome;
 
     private String clienteWhatsapp;
+
+    private String tipoRecebimento;
 
     @Enumerated(EnumType.STRING)
     private StatusPedido status;

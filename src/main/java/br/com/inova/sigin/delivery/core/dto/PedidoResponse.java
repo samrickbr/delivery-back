@@ -14,10 +14,12 @@ public record PedidoResponse(
         Long canalVendaId,
         Object canalVenda,
         LocalDateTime dataPedido,
+        BigDecimal valorProdutos,
         BigDecimal valorTotal,
         BigDecimal taxaEntrega,
         String status,
         List<PedidoPagamentoResponse> pagamentos,
+        List<PedidoItemResponse> itens,
         Boolean ativo,
         String observacao
 ) {
