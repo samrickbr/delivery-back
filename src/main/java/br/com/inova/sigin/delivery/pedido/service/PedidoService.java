@@ -213,13 +213,11 @@ public class PedidoService {
                 .filter(item ->
                         getSetor(item).equals(setor)
                 )
-                .forEach(item -> {
-
-                    item.setStatusOperacao(
-                            StatusOperacao.CANCELADO
-                    );
-
-                });
+                .forEach(item ->
+                        item.setStatusOperacao(
+                                StatusOperacao.CANCELADO
+                        )
+                );
 
         boolean todosCancelados =
                 pedido.getItens()
@@ -320,6 +318,11 @@ public class PedidoService {
                         )
                 )
                 .stream()
+                .filter(pedido ->
+                        "ENTREGA".equalsIgnoreCase(
+                                pedido.getTipoRecebimento()
+                        )
+                )
                 .map(mapper::toResponse)
                 .toList();
     }
@@ -396,6 +399,11 @@ public class PedidoService {
                         )
                 )
                 .stream()
+                .filter(pedido ->
+                        "ENTREGA".equalsIgnoreCase(
+                                pedido.getTipoRecebimento()
+                        )
+                )
                 .map(mapper::toEntregaResponse)
                 .toList();
     }
@@ -406,9 +414,6 @@ public class PedidoService {
                 .findByStatusInOrderByDataCriacaoAsc(
                         List.of(
                                 StatusPedido.RECEBIDO,
-                                StatusPedido.APROVADO,
-                                StatusPedido.EM_PRODUCAO,
-                                StatusPedido.PENDENTE,
                                 StatusPedido.FINALIZADO,
                                 StatusPedido.AGUARDANDO_SEPARACAO
                         )
@@ -788,6 +793,24 @@ public class PedidoService {
 
         return configuracao.getTaxaEntrega();
     }
+    public List<PedidoBalcaoResponse> listarRetirada() {
+
+        return repository
+                .findByStatusInOrderByStatusAlteradoEmAsc(
+                        List.of(
+                                StatusPedido.SEPARADO
+                        )
+                )
+                .stream()
+                .filter(pedido ->
+                        "RETIRADA".equalsIgnoreCase(
+                                pedido.getTipoRecebimento()
+                        )
+                )
+                .map(mapper::toBalcaoResponse)
+                .toList();
+    }
+
     public List<PedidoResponse> listarMeus(String authorization) {
         CoreAuthMeResponse autenticado =
                 coreClient.buscarAutenticado(authorization);

@@ -4,7 +4,6 @@ import br.com.inova.sigin.delivery.pedido.dto.*;
 import br.com.inova.sigin.delivery.pedido.service.PedidoService;
 import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,14 +28,14 @@ public class PedidoController {
     }
 
     @PutMapping("/{id}/aprovar")
-    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse aprovar(
+    public PedidoResponse aprovar(
             @PathVariable Long id
     ) {
         return service.aprovar(id);
     }
 
     @PutMapping("/{id}/pendente/{setor}")
-    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse colocarPendente(
+    public PedidoResponse colocarPendente(
             @PathVariable Long id,
             @PathVariable String setor,
             @RequestBody PedidoPendenciaRequest request
@@ -45,7 +44,7 @@ public class PedidoController {
     }
 
     @PutMapping("/{id}/cancelar/{setor}")
-    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse cancelar(
+    public PedidoResponse cancelar(
             @PathVariable Long id,
             @PathVariable String setor,
             @RequestBody CancelamentoRequest request
@@ -54,12 +53,12 @@ public class PedidoController {
     }
 
     @GetMapping
-    public List<br.com.inova.sigin.delivery.pedido.dto.PedidoResponse> listar() {
+    public List<PedidoResponse> listar() {
         return service.listar();
     }
 
     @GetMapping("/status/{status}")
-    public List<br.com.inova.sigin.delivery.pedido.dto.PedidoResponse> listarPorStatus(
+    public List<PedidoResponse> listarPorStatus(
             @PathVariable StatusPedido status
     ) {
         return service.listarPorStatus(status);
@@ -73,31 +72,31 @@ public class PedidoController {
     }
 
     @GetMapping("/finalizados")
-    public List<br.com.inova.sigin.delivery.pedido.dto.PedidoResponse> listarFinalizados() {
+    public List<PedidoResponse> listarFinalizados() {
         return service.listarFinalizados();
     }
 
     @GetMapping("/entrega")
-    public List<br.com.inova.sigin.delivery.pedido.dto.PedidoResponse> listarEntrega() {
+    public List<PedidoResponse> listarEntrega() {
         return service.listarEntrega();
     }
 
     @PutMapping("/{id}/sair-entrega")
-    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse sairParaEntrega(
+    public PedidoResponse sairParaEntrega(
             @PathVariable Long id
     ) {
         return service.sairParaEntrega(id);
     }
 
     @PutMapping("/{id}/entregar")
-    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse entregar(
+    public PedidoResponse entregar(
             @PathVariable Long id
     ) {
         return service.entregar(id);
     }
 
     @GetMapping("/entregues")
-    public List<br.com.inova.sigin.delivery.pedido.dto.PedidoResponse> listarEntregues() {
+    public List<PedidoResponse> listarEntregues() {
         return service.listarEntregues();
     }
 
@@ -117,14 +116,14 @@ public class PedidoController {
     }
 
     @PutMapping("/{id}/separar")
-    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse separar(
+    public PedidoResponse separar(
             @PathVariable Long id
     ) {
         return service.separar(id);
     }
 
     @PutMapping("/{id}/liberar-entrega")
-    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse liberarEntrega(
+    public PedidoResponse liberarEntrega(
             @PathVariable Long id,
             @RequestBody SeparacaoRequest request
     ) {
@@ -132,7 +131,7 @@ public class PedidoController {
     }
 
     @PutMapping("/{id}/iniciar-producao/{setor}")
-    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse iniciarProducao(
+    public PedidoResponse iniciarProducao(
             @PathVariable Long id,
             @PathVariable String setor
     ) {
@@ -140,7 +139,7 @@ public class PedidoController {
     }
 
     @PutMapping("/{id}/finalizar/{setor}")
-    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse finalizar(
+    public PedidoResponse finalizar(
             @PathVariable Long id,
             @PathVariable String setor
     ) {
@@ -148,7 +147,7 @@ public class PedidoController {
     }
 
     @PutMapping("/{id}/conferir")
-    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse conferir(
+    public PedidoResponse conferir(
             @PathVariable Long id
     ) {
         return service.conferir(id);
@@ -162,7 +161,7 @@ public class PedidoController {
     }
 
     @PutMapping("/{id}/cancelar-pedido")
-    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse cancelarPedido(
+    public PedidoResponse cancelarPedido(
             @PathVariable Long id,
             @RequestBody CancelamentoRequest request
     ) {
@@ -170,7 +169,7 @@ public class PedidoController {
     }
 
     @PutMapping("/{id}/cancelar-itens/{setor}")
-    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse cancelarItens(
+    public PedidoResponse cancelarItens(
             @PathVariable Long id,
             @PathVariable String setor,
             @RequestBody CancelamentoItensRequest request
@@ -179,7 +178,7 @@ public class PedidoController {
     }
 
     @PutMapping("/{id}/cancelar-completo")
-    public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse cancelarPedidoCompleto(
+    public PedidoResponse cancelarPedidoCompleto(
             @PathVariable Long id,
             @RequestBody CancelamentoRequest request
     ) {
@@ -193,6 +192,12 @@ public class PedidoController {
     public List<PedidoBalcaoResponse> listarSeparacao() {
         return service.listarSeparacao();
     }
+
+    @GetMapping("/retirada")
+    public List<PedidoBalcaoResponse> listarRetirada() {
+        return service.listarRetirada();
+    }
+
     @GetMapping("/meus")
     public List<PedidoResponse> listarMeus(
             @RequestHeader("Authorization") String authorization
