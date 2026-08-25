@@ -22,4 +22,6 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     List<Pedido> findByStatusInOrderByStatusAlteradoEmAsc(List<StatusPedido> status);
 
     Optional<Pedido> findByCorePedidoId(Long corePedidoId);
+
+    List<Pedido> findByClienteIdOrderByDataCriacaoDesc(Long clienteId);
 }

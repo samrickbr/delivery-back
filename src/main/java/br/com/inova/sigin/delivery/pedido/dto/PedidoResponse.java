@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -23,6 +24,10 @@ public class PedidoResponse {
     private String formaPagamento;
 
     private String observacaoOperacao;
+
+    private LocalDateTime dataCriacao;
+
+    private String tipoRecebimento;
 
     private List<PedidoHistoricoResponse> historico;
 }

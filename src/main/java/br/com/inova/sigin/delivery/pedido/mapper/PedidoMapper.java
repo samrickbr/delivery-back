@@ -63,6 +63,8 @@ public class PedidoMapper {
                 .valorTotal(pedido.getValorTotal())
                 .formaPagamento(pedido.getFormaPagamento())
                 .observacaoOperacao(pedido.getObservacaoOperacao())
+                .dataCriacao(pedido.getDataCriacao())
+                .tipoRecebimento(pedido.getTipoRecebimento())
                 .itens(
                         pedido.getItens()
                                 .stream()

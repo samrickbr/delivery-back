@@ -788,4 +788,23 @@ public class PedidoService {
 
         return configuracao.getTaxaEntrega();
     }
+    public List<PedidoResponse> listarMeus(String authorization) {
+        CoreAuthMeResponse autenticado =
+                coreClient.buscarAutenticado(authorization);
+
+        if (autenticado == null
+                || autenticado.getPessoa() == null
+                || autenticado.getPessoa().getId() == null) {
+            throw new IllegalStateException(
+                    "Não foi possível identificar o cliente autenticado."
+            );
+        }
+
+        Long clienteId = autenticado.getPessoa().getId();
+
+        return repository.findByClienteIdOrderByDataCriacaoDesc(clienteId)
+                .stream()
+                .map(mapper::toResponse)
+                .toList();
+    }
 }

@@ -4,6 +4,7 @@ import br.com.inova.sigin.delivery.pedido.dto.*;
 import br.com.inova.sigin.delivery.pedido.service.PedidoService;
 import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -191,5 +192,11 @@ public class PedidoController {
     @GetMapping("/separacao")
     public List<PedidoBalcaoResponse> listarSeparacao() {
         return service.listarSeparacao();
+    }
+    @GetMapping("/meus")
+    public List<PedidoResponse> listarMeus(
+            @RequestHeader("Authorization") String authorization
+    ) {
+        return service.listarMeus(authorization);
     }
 }
