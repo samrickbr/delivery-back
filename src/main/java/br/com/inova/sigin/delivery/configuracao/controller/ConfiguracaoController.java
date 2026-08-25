@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+
 @RestController
 @RequestMapping("/configuracoes")
 @RequiredArgsConstructor
@@ -26,5 +28,10 @@ public class ConfiguracaoController {
             @PathVariable Long id) {
 
         return service.buscar(id);
+    }
+
+    @GetMapping("/taxa-entrega")
+    public BigDecimal buscarTaxaEntrega() {
+        return service.buscarTaxaEntrega();
     }
 }

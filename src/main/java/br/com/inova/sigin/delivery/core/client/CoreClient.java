@@ -1,5 +1,6 @@
 package br.com.inova.sigin.delivery.core.client;
 
+import br.com.inova.sigin.delivery.configuracao.dto.ConfiguracaoSistemaResponse;
 import br.com.inova.sigin.delivery.core.config.CoreClientProperties;
 import br.com.inova.sigin.delivery.core.dto.*;
 import br.com.inova.sigin.delivery.core.exception.CoreIntegrationException;
@@ -11,6 +12,7 @@ import org.springframework.web.client.RestClient;
 
 import br.com.inova.sigin.delivery.cliente.dto.ClienteEnderecoRequest;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -273,6 +275,7 @@ public class CoreClient {
         }
     }
 
+
     public CoreLoginResponse autenticarCliente(String cpf, String senha) {
         try {
             if (cpf == null || cpf.isBlank()) {
@@ -369,6 +372,79 @@ public class CoreClient {
         }
     }
 
+    public ConfiguracaoSistemaResponse buscarConfiguracaoSistema() {
+        try {
+            return restClient.get()
+                    .uri("/configuracoes-sistema")
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::is4xxClientError,
+                            (request, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core rejeitou a consulta da configuração do sistema. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .onStatus(
+                            HttpStatusCode::is5xxServerError,
+                            (request, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core apresentou erro interno ao consultar a configuração do sistema. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .body(ConfiguracaoSistemaResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível consultar a configuração do sistema no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+
+    public BigDecimal buscarTaxaEntrega() {
+        try {
+            ConfiguracaoSistemaResponse response = restClient.get()
+                    .uri("/configuracoes-sistema")
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, responseHttp) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a consulta da configuração do sistema. HTTP "
+                                        + responseHttp.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, responseHttp) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao consultar a configuração do sistema. HTTP "
+                                        + responseHttp.getStatusCode().value()
+                        );
+                    })
+                    .body(ConfiguracaoSistemaResponse.class);
+
+            if (response == null || response.taxaEntregaPadrao() == null) {
+                throw new CoreIntegrationException(
+                        "SIGIN Core não retornou a taxa de entrega configurada."
+                );
+            }
+
+            return response.taxaEntregaPadrao();
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível consultar a taxa de entrega no SIGIN Core.",
+                    exception
+            );
+        }
+    }
     private String autenticar() {
         try {
             CoreLoginRequest request = new CoreLoginRequest(
