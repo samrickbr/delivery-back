@@ -150,17 +150,39 @@ public class PedidoService {
         );
     }
 
-    public PedidoResponse aprovar(Long id) {
+    public PedidoResponse aprovar(
+            Long id,
+            String authorization
+    ) {
         Pedido pedido = buscarEntidade(id);
+
+        CoreAuthMeResponse autenticado =
+                buscarUsuarioAutenticado(authorization);
+
+        Long usuarioId = autenticado.getId();
+
         statusService.aprovar(pedido);
+
+        pedido.getItens()
+                .stream()
+                .filter(item ->
+                        item.getStatusOperacao() != StatusOperacao.CANCELADO
+                )
+                .forEach(item ->
+                        item.setStatusOperacao(StatusOperacao.APROVADO)
+                );
+
         pedido.setStatusAlteradoEm(LocalDateTime.now());
+
         historicoService.registrar(
                 pedido,
+                usuarioId,
                 "Sistema",
                 "BALCAO",
                 "APROVADO",
                 "Pedido aprovado."
         );
+
         return salvar(pedido);
     }
 
@@ -170,7 +192,6 @@ public class PedidoService {
             String setor,
             PedidoPendenciaRequest request
     ) {
-
         Pedido pedido = buscarEntidade(id);
 
         pedido.getItens()
@@ -190,6 +211,7 @@ public class PedidoService {
 
         historicoService.registrar(
                 pedido,
+                null,
                 "Sistema",
                 setor,
                 "PENDENTE",
@@ -205,7 +227,6 @@ public class PedidoService {
             String setor,
             CancelamentoRequest request
     ) {
-
         Pedido pedido = buscarEntidade(id);
 
         pedido.getItens()
@@ -242,6 +263,7 @@ public class PedidoService {
 
         historicoService.registrar(
                 pedido,
+                null,
                 "Sistema",
                 setor,
                 "SETOR_CANCELADO",
@@ -284,7 +306,8 @@ public class PedidoService {
                 .map(PedidoItem::getPedido)
                 .distinct()
                 .filter(pedido ->
-                        pedido.getStatus() != StatusPedido.ENTREGUE &&
+                        pedido.getStatus() != StatusPedido.RECEBIDO &&
+                                pedido.getStatus() != StatusPedido.ENTREGUE &&
                                 pedido.getStatus() != StatusPedido.CANCELADO &&
                                 pedido.getStatus() != StatusPedido.FINALIZADO
                 )
@@ -354,6 +377,7 @@ public class PedidoService {
 
         historicoService.registrar(
                 pedido,
+                null,
                 "Sistema",
                 "ENTREGA",
                 "SAIU_ENTREGA",
@@ -474,6 +498,7 @@ public class PedidoService {
 
         historicoService.registrar(
                 pedido,
+                null,
                 "Sistema",
                 "BALCAO",
                 "SEPARACAO",
@@ -507,6 +532,7 @@ public class PedidoService {
 
         historicoService.registrar(
                 pedido,
+                null,
                 "Sistema",
                 setor,
                 "PRODUCAO_INICIADA",
@@ -556,6 +582,7 @@ public class PedidoService {
 
         historicoService.registrar(
                 pedido,
+                null,
                 "Sistema",
                 setor,
                 "FINALIZADO",
@@ -582,6 +609,7 @@ public class PedidoService {
 
         historicoService.registrar(
                 pedido,
+                null,
                 "Sistema",
                 "BALCAO",
                 "CONFERENCIA",
@@ -615,6 +643,7 @@ public class PedidoService {
 
         historicoService.registrar(
                 pedido,
+                null,
                 "Sistema",
                 "BALCAO",
                 "PEDIDO_CANCELADO",
@@ -668,6 +697,7 @@ public class PedidoService {
 
             historicoService.registrar(
                     pedido,
+                    null,
                     "Sistema",
                     setor,
                     "ITEM_CANCELADO",
@@ -718,6 +748,7 @@ public class PedidoService {
 
         historicoService.registrar(
                 pedido,
+                null,
                 "Sistema",
                 "BALCAO",
                 "PEDIDO_CANCELADO",
@@ -793,6 +824,7 @@ public class PedidoService {
 
         return configuracao.getTaxaEntrega();
     }
+
     public List<PedidoBalcaoResponse> listarRetirada() {
 
         return repository
@@ -812,16 +844,9 @@ public class PedidoService {
     }
 
     public List<PedidoResponse> listarMeus(String authorization) {
-        CoreAuthMeResponse autenticado =
-                coreClient.buscarAutenticado(authorization);
 
-        if (autenticado == null
-                || autenticado.getPessoa() == null
-                || autenticado.getPessoa().getId() == null) {
-            throw new IllegalStateException(
-                    "Não foi possível identificar o cliente autenticado."
-            );
-        }
+        CoreAuthMeResponse autenticado =
+                buscarUsuarioAutenticado(authorization);
 
         Long clienteId = autenticado.getPessoa().getId();
 
@@ -829,5 +854,171 @@ public class PedidoService {
                 .stream()
                 .map(mapper::toResponse)
                 .toList();
+    }
+
+    @Transactional
+    public PedidoResponse iniciarProducaoItem(
+            Long pedidoId,
+            Long itemId
+    ) {
+
+        Pedido pedido = buscarEntidade(pedidoId);
+        PedidoItem item = buscarItemDoPedido(pedido, itemId);
+
+        validarItemNaoCancelado(item);
+
+        if (item.getStatusOperacao() != StatusOperacao.APROVADO) {
+            throw new IllegalArgumentException(
+                    "Item não pode iniciar produção a partir do status atual."
+            );
+        }
+
+        item.setStatusOperacao(StatusOperacao.EM_PRODUCAO);
+
+        pedido.setStatusAlteradoEm(LocalDateTime.now());
+
+        historicoService.registrar(
+                pedido,
+                null,
+                "Sistema",
+                getSetor(item),
+                "PRODUCAO_INICIADA",
+                "Produção iniciada."
+        );
+
+        repository.save(pedido);
+
+        return mapper.toResponse(pedido);
+    }
+
+    @Transactional
+    public PedidoResponse colocarPendenteItem(
+            Long pedidoId,
+            Long itemId,
+            PedidoPendenciaRequest request
+    ) {
+
+        Pedido pedido = buscarEntidade(pedidoId);
+        PedidoItem item = buscarItemDoPedido(pedido, itemId);
+
+        validarItemNaoCancelado(item);
+
+        if (item.getStatusOperacao() != StatusOperacao.APROVADO) {
+            throw new IllegalArgumentException(
+                    "Item não pode ser colocado em espera a partir do status atual."
+            );
+        }
+
+        item.setStatusOperacao(StatusOperacao.PENDENTE);
+
+        pedido.setObservacaoOperacao(request.getMotivo());
+        pedido.setStatusAlteradoEm(LocalDateTime.now());
+
+        repository.save(pedido);
+
+        historicoService.registrar(
+                pedido,
+                null,
+                "Sistema",
+                getSetor(item),
+                "PENDENTE",
+                request.getMotivo()
+        );
+
+        return mapper.toResponse(pedido);
+    }
+
+    @Transactional
+    public PedidoResponse finalizarItem(
+            Long pedidoId,
+            Long itemId
+    ) {
+
+        Pedido pedido = buscarEntidade(pedidoId);
+        PedidoItem item = buscarItemDoPedido(pedido, itemId);
+
+        validarItemNaoCancelado(item);
+
+        if (item.getStatusOperacao() != StatusOperacao.EM_PRODUCAO) {
+            throw new IllegalArgumentException(
+                    "Item não pode ser finalizado a partir do status atual."
+            );
+        }
+
+        item.setStatusOperacao(StatusOperacao.FINALIZADO);
+
+        boolean todosFinalizados =
+                pedido.getItens()
+                        .stream()
+                        .allMatch(outroItem ->
+                                outroItem.getStatusOperacao() == StatusOperacao.FINALIZADO
+                                        || outroItem.getStatusOperacao() == StatusOperacao.CANCELADO
+                        );
+
+        if (todosFinalizados) {
+            pedido.setStatus(StatusPedido.FINALIZADO);
+        }
+
+        pedido.setStatusAlteradoEm(LocalDateTime.now());
+
+        repository.save(pedido);
+
+        historicoService.registrar(
+                pedido,
+                null,
+                "Sistema",
+                getSetor(item),
+                "FINALIZADO",
+                "Item finalizou a produção."
+        );
+
+        return mapper.toResponse(pedido);
+    }
+
+    private PedidoItem buscarItemDoPedido(
+            Pedido pedido,
+            Long itemId
+    ) {
+        return pedido.getItens()
+                .stream()
+                .filter(item -> item.getId().equals(itemId))
+                .findFirst()
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Item não pertence ao pedido informado."
+                        )
+                );
+    }
+
+    private void validarItemNaoCancelado(
+            PedidoItem item
+    ) {
+        if (item.getStatusOperacao() == StatusOperacao.CANCELADO) {
+            throw new IllegalArgumentException(
+                    "Item cancelado não pode ser operado."
+            );
+        }
+    }
+
+    private CoreAuthMeResponse buscarUsuarioAutenticado(
+            String authorization
+    ) {
+        CoreAuthMeResponse autenticado =
+                coreClient.buscarAutenticado(authorization);
+
+        if (autenticado == null || autenticado.getId() == null) {
+            throw new IllegalStateException(
+                    "Não foi possível identificar o usuário autenticado."
+            );
+        }
+
+        if (autenticado.getPessoa() == null
+                || autenticado.getPessoa().getId() == null) {
+            throw new IllegalStateException(
+                    "Usuário autenticado não possui pessoa vinculada."
+            );
+        }
+
+        return autenticado;
     }
 }

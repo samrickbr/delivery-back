@@ -16,17 +16,17 @@ public class PedidoHistoricoService {
 
     public void registrar(
             Pedido pedido,
-            String usuario,
+            Long usuarioId,
+            String usuarioNome,
             String setor,
             String acao,
             String descricao
     ) {
-
         repository.save(
                 PedidoHistorico.builder()
                         .pedido(pedido)
-                        .usuarioId(null)
-                        .usuarioNome(usuario)
+                        .usuarioId(usuarioId)
+                        .usuarioNome(usuarioNome)
                         .setor(setor)
                         .acao(acao)
                         .descricao(descricao)
@@ -34,5 +34,4 @@ public class PedidoHistoricoService {
                         .build()
         );
     }
-
 }

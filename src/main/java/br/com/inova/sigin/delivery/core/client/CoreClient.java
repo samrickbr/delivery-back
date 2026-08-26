@@ -445,6 +445,92 @@ public class CoreClient {
             );
         }
     }
+
+    public CoreLoginResponse autenticarOperador(
+            String login,
+            String senha
+    ) {
+        try {
+            if (login == null || login.isBlank()) {
+                throw new CoreIntegrationException(
+                        "Login não informado."
+                );
+            }
+
+            if (senha == null || senha.isBlank()) {
+                throw new CoreIntegrationException(
+                        "Senha não informada."
+                );
+            }
+
+            CoreLoginRequest request = new CoreLoginRequest(
+                    login.trim(),
+                    senha
+            );
+
+            CoreLoginResponse response = restClient.post()
+                    .uri("/auth/login")
+                    .contentType(
+                            org.springframework.http.MediaType.APPLICATION_JSON
+                    )
+                    .body(request)
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::is4xxClientError,
+                            (httpRequest, httpResponse) -> {
+
+                                String corpo = "";
+
+                                try {
+                                    if (httpResponse.getBody() != null) {
+                                        corpo = new String(
+                                                httpResponse.getBody().readAllBytes(),
+                                                java.nio.charset.StandardCharsets.UTF_8
+                                        );
+                                    }
+                                } catch (Exception ignored) {
+                                }
+
+                                throw new CoreIntegrationException(
+                                        extrairMensagemErro(
+                                                corpo,
+                                                "Login ou senha inválidos."
+                                        )
+                                );
+                            }
+                    )
+                    .onStatus(
+                            HttpStatusCode::is5xxServerError,
+                            (httpRequest, httpResponse) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core apresentou erro interno na autenticação do operador. HTTP "
+                                                + httpResponse.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .body(CoreLoginResponse.class);
+
+            if (response == null
+                    || response.getToken() == null
+                    || response.getToken().isBlank()) {
+
+                throw new CoreIntegrationException(
+                        "SIGIN Core não retornou token de autenticação do operador."
+                );
+            }
+
+            return response;
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível autenticar o operador no SIGIN Core.",
+                    exception
+            );
+        }
+    }
     private String autenticar() {
         try {
             CoreLoginRequest request = new CoreLoginRequest(

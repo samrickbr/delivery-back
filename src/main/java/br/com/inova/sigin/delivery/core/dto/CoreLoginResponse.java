@@ -10,4 +10,6 @@ public class CoreLoginResponse {
     private String tipo;
 
     private Long clienteId;
+
+    private Long usuarioId;
 }

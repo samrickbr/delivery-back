@@ -11,9 +11,9 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(CoreIntegrationException.class)
-    public ResponseEntity<Map<String, Object>> handleCoreIntegrationException(
-            CoreIntegrationException exception
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(
+            IllegalArgumentException exception
     ) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)

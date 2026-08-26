@@ -29,16 +29,18 @@ public class PedidoController {
 
     @PutMapping("/{id}/aprovar")
     public PedidoResponse aprovar(
-            @PathVariable Long id
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authorization
     ) {
-        return service.aprovar(id);
+        return service.aprovar(id, authorization);
     }
 
     @PutMapping("/{id}/pendente/{setor}")
     public PedidoResponse colocarPendente(
             @PathVariable Long id,
             @PathVariable String setor,
-            @RequestBody PedidoPendenciaRequest request
+            @RequestBody PedidoPendenciaRequest request,
+            @RequestHeader("Authorization") String authorization
     ) {
         return service.colocarPendente(id, setor, request);
     }
@@ -47,7 +49,8 @@ public class PedidoController {
     public PedidoResponse cancelar(
             @PathVariable Long id,
             @PathVariable String setor,
-            @RequestBody CancelamentoRequest request
+            @RequestBody CancelamentoRequest request,
+            @RequestHeader("Authorization") String authorization
     ) {
         return service.cancelar(id, setor, request);
     }
@@ -83,14 +86,16 @@ public class PedidoController {
 
     @PutMapping("/{id}/sair-entrega")
     public PedidoResponse sairParaEntrega(
-            @PathVariable Long id
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authorization
     ) {
         return service.sairParaEntrega(id);
     }
 
     @PutMapping("/{id}/entregar")
     public PedidoResponse entregar(
-            @PathVariable Long id
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authorization
     ) {
         return service.entregar(id);
     }
@@ -117,7 +122,8 @@ public class PedidoController {
 
     @PutMapping("/{id}/separar")
     public PedidoResponse separar(
-            @PathVariable Long id
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authorization
     ) {
         return service.separar(id);
     }
@@ -125,7 +131,8 @@ public class PedidoController {
     @PutMapping("/{id}/liberar-entrega")
     public PedidoResponse liberarEntrega(
             @PathVariable Long id,
-            @RequestBody SeparacaoRequest request
+            @RequestBody SeparacaoRequest request,
+            @RequestHeader("Authorization") String authorization
     ) {
         return service.liberarEntrega(id, request);
     }
@@ -133,7 +140,8 @@ public class PedidoController {
     @PutMapping("/{id}/iniciar-producao/{setor}")
     public PedidoResponse iniciarProducao(
             @PathVariable Long id,
-            @PathVariable String setor
+            @PathVariable String setor,
+            @RequestHeader("Authorization") String authorization
     ) {
         return service.iniciarProducao(id, setor);
     }
@@ -141,14 +149,16 @@ public class PedidoController {
     @PutMapping("/{id}/finalizar/{setor}")
     public PedidoResponse finalizar(
             @PathVariable Long id,
-            @PathVariable String setor
+            @PathVariable String setor,
+            @RequestHeader("Authorization") String authorization
     ) {
         return service.finalizar(id, setor);
     }
 
     @PutMapping("/{id}/conferir")
     public PedidoResponse conferir(
-            @PathVariable Long id
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authorization
     ) {
         return service.conferir(id);
     }
@@ -163,7 +173,8 @@ public class PedidoController {
     @PutMapping("/{id}/cancelar-pedido")
     public PedidoResponse cancelarPedido(
             @PathVariable Long id,
-            @RequestBody CancelamentoRequest request
+            @RequestBody CancelamentoRequest request,
+            @RequestHeader("Authorization") String authorization
     ) {
         return service.cancelarPedido(id, request);
     }
@@ -172,7 +183,8 @@ public class PedidoController {
     public PedidoResponse cancelarItens(
             @PathVariable Long id,
             @PathVariable String setor,
-            @RequestBody CancelamentoItensRequest request
+            @RequestBody CancelamentoItensRequest request,
+            @RequestHeader("Authorization") String authorization
     ) {
         return service.cancelarItens(id, setor, request);
     }
@@ -180,7 +192,8 @@ public class PedidoController {
     @PutMapping("/{id}/cancelar-completo")
     public PedidoResponse cancelarPedidoCompleto(
             @PathVariable Long id,
-            @RequestBody CancelamentoRequest request
+            @RequestBody CancelamentoRequest request,
+            @RequestHeader("Authorization") String authorization
     ) {
         return service.cancelarPedidoCompleto(
                 id,
@@ -204,4 +217,32 @@ public class PedidoController {
     ) {
         return service.listarMeus(authorization);
     }
+    @PutMapping("/{pedidoId}/itens/{itemId}/iniciar-producao")
+    public PedidoResponse iniciarProducaoItem(
+            @PathVariable Long pedidoId,
+            @PathVariable Long itemId,
+            @RequestHeader("Authorization") String authorization
+    ) {
+        return service.iniciarProducaoItem(pedidoId, itemId);
+    }
+
+    @PutMapping("/{pedidoId}/itens/{itemId}/pendente")
+    public PedidoResponse colocarPendenteItem(
+            @PathVariable Long pedidoId,
+            @PathVariable Long itemId,
+            @RequestBody PedidoPendenciaRequest request,
+            @RequestHeader("Authorization") String authorization
+    ) {
+        return service.colocarPendenteItem(pedidoId, itemId, request);
+    }
+
+    @PutMapping("/{pedidoId}/itens/{itemId}/finalizar")
+    public PedidoResponse finalizarItem(
+            @PathVariable Long pedidoId,
+            @PathVariable Long itemId,
+            @RequestHeader("Authorization") String authorization
+    ) {
+        return service.finalizarItem(pedidoId, itemId);
+    }
+
 }
