@@ -1,8 +1,8 @@
 package br.com.inova.sigin.delivery.pedido.controller;
 
 import br.com.inova.sigin.delivery.pedido.dto.*;
-import br.com.inova.sigin.delivery.pedido.service.PedidoService;
 import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
+import br.com.inova.sigin.delivery.pedido.service.PedidoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,15 +42,19 @@ public class PedidoController {
             @RequestBody PedidoPendenciaRequest request,
             @RequestHeader("Authorization") String authorization
     ) {
-        return service.colocarPendente(id, setor, request);
+        return service.colocarPendente(
+                id,
+                setor,
+                request,
+                authorization
+        );
     }
 
     @PutMapping("/{id}/cancelar/{setor}")
     public PedidoResponse cancelar(
             @PathVariable Long id,
             @PathVariable String setor,
-            @RequestBody CancelamentoRequest request,
-            @RequestHeader("Authorization") String authorization
+            @RequestBody CancelamentoRequest request
     ) {
         return service.cancelar(id, setor, request);
     }
@@ -86,16 +90,14 @@ public class PedidoController {
 
     @PutMapping("/{id}/sair-entrega")
     public PedidoResponse sairParaEntrega(
-            @PathVariable Long id,
-            @RequestHeader("Authorization") String authorization
+            @PathVariable Long id
     ) {
         return service.sairParaEntrega(id);
     }
 
     @PutMapping("/{id}/entregar")
     public PedidoResponse entregar(
-            @PathVariable Long id,
-            @RequestHeader("Authorization") String authorization
+            @PathVariable Long id
     ) {
         return service.entregar(id);
     }
@@ -125,7 +127,7 @@ public class PedidoController {
             @PathVariable Long id,
             @RequestHeader("Authorization") String authorization
     ) {
-        return service.separar(id);
+        return service.separar(id, authorization);
     }
 
     @PutMapping("/{id}/liberar-entrega")
@@ -134,7 +136,7 @@ public class PedidoController {
             @RequestBody SeparacaoRequest request,
             @RequestHeader("Authorization") String authorization
     ) {
-        return service.liberarEntrega(id, request);
+        return service.liberarEntrega(id, request, authorization);
     }
 
     @PutMapping("/{id}/iniciar-producao/{setor}")
@@ -143,7 +145,7 @@ public class PedidoController {
             @PathVariable String setor,
             @RequestHeader("Authorization") String authorization
     ) {
-        return service.iniciarProducao(id, setor);
+        return service.iniciarProducao(id, setor, authorization);
     }
 
     @PutMapping("/{id}/finalizar/{setor}")
@@ -152,7 +154,7 @@ public class PedidoController {
             @PathVariable String setor,
             @RequestHeader("Authorization") String authorization
     ) {
-        return service.finalizar(id, setor);
+        return service.finalizar(id, setor, authorization);
     }
 
     @PutMapping("/{id}/conferir")
@@ -160,7 +162,7 @@ public class PedidoController {
             @PathVariable Long id,
             @RequestHeader("Authorization") String authorization
     ) {
-        return service.conferir(id);
+        return service.conferir(id, authorization);
     }
 
     @GetMapping("/{id}/historico")
@@ -173,8 +175,7 @@ public class PedidoController {
     @PutMapping("/{id}/cancelar-pedido")
     public PedidoResponse cancelarPedido(
             @PathVariable Long id,
-            @RequestBody CancelamentoRequest request,
-            @RequestHeader("Authorization") String authorization
+            @RequestBody CancelamentoRequest request
     ) {
         return service.cancelarPedido(id, request);
     }
@@ -183,8 +184,7 @@ public class PedidoController {
     public PedidoResponse cancelarItens(
             @PathVariable Long id,
             @PathVariable String setor,
-            @RequestBody CancelamentoItensRequest request,
-            @RequestHeader("Authorization") String authorization
+            @RequestBody CancelamentoItensRequest request
     ) {
         return service.cancelarItens(id, setor, request);
     }
@@ -192,8 +192,7 @@ public class PedidoController {
     @PutMapping("/{id}/cancelar-completo")
     public PedidoResponse cancelarPedidoCompleto(
             @PathVariable Long id,
-            @RequestBody CancelamentoRequest request,
-            @RequestHeader("Authorization") String authorization
+            @RequestBody CancelamentoRequest request
     ) {
         return service.cancelarPedidoCompleto(
                 id,
@@ -217,11 +216,11 @@ public class PedidoController {
     ) {
         return service.listarMeus(authorization);
     }
+
     @PutMapping("/{pedidoId}/itens/{itemId}/iniciar-producao")
     public PedidoResponse iniciarProducaoItem(
             @PathVariable Long pedidoId,
-            @PathVariable Long itemId,
-            @RequestHeader("Authorization") String authorization
+            @PathVariable Long itemId
     ) {
         return service.iniciarProducaoItem(pedidoId, itemId);
     }
@@ -230,19 +229,20 @@ public class PedidoController {
     public PedidoResponse colocarPendenteItem(
             @PathVariable Long pedidoId,
             @PathVariable Long itemId,
-            @RequestBody PedidoPendenciaRequest request,
-            @RequestHeader("Authorization") String authorization
+            @RequestBody PedidoPendenciaRequest request
     ) {
-        return service.colocarPendenteItem(pedidoId, itemId, request);
+        return service.colocarPendenteItem(
+                pedidoId,
+                itemId,
+                request
+        );
     }
 
     @PutMapping("/{pedidoId}/itens/{itemId}/finalizar")
     public PedidoResponse finalizarItem(
             @PathVariable Long pedidoId,
-            @PathVariable Long itemId,
-            @RequestHeader("Authorization") String authorization
+            @PathVariable Long itemId
     ) {
         return service.finalizarItem(pedidoId, itemId);
     }
-
 }
