@@ -1,0 +1,18 @@
+spring:
+  config:
+    import: optional:file:../../sigin-runtime/secrets/delivery.properties
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sigin_delivery
+    username: postgres
+    password: admin
+
+server:
+  port: 8081
+
+sigin:
+  core:
+    url: http://localhost:8080
+    canal-venda-id: 2
+    login: ${SIGIN_CORE_LOGIN}
+    senha: ${SIGIN_CORE_SENHA}

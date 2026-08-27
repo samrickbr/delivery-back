@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: sigin-delivery
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
