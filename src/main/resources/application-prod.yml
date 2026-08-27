@@ -5,6 +5,7 @@ spring:
     password: ${PGPASSWORD}
 
 server:
+  port: 8081
   forward-headers-strategy: native
   tomcat:
     remoteip:
@@ -12,8 +13,11 @@ server:
       remote-ip-header: x-forwarded-for
 
 sigin:
-  core:
-    url: ${SIGIN_CORE_URL}
-    canal-venda-id: ${SIGIN_CORE_CANAL_VENDA_ID}
-    login: ${SIGIN_CORE_LOGIN}
-    senha: ${SIGIN_CORE_SENHA}
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+    core:
+      url: ${SIGIN_CORE_URL}
+      canal-venda-id: ${SIGIN_CORE_CANAL_VENDA_ID}
+      login: ${SIGIN_CORE_LOGIN}
+      senha: ${SIGIN_CORE_SENHA}
