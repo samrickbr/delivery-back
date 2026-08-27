@@ -1,0 +1,11 @@
+[variables]
+NIXPACKS_JDK_VERSION = "21"
+
+[phases.setup]
+nixPkgs = ["jdk21", "maven"]
+
+[phases.build]
+cmds = ["java -version", "javac -version", "mvn -version", "mvn clean install -DskipTests"]
+
+[start]
+cmd = "java -jar target/sigin-delivery-0.0.1-SNAPSHOT.jar"
