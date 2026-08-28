@@ -137,4 +137,23 @@ public class ClienteService {
                 )
         );
     }
+
+    public List<ClientePesquisaResponse> pesquisarClientes(String busca, String token) {
+        return coreClient.pesquisarClientes(busca, token);
+    }
+
+    public ClienteResponse cadastrarClienteOperacional(
+            ClienteOperacionalRequest request,
+            String token
+    ) {
+        return coreClient.cadastrarClienteOperacional(request, token);
+    }
+
+    public ClienteEnderecoResponse cadastrarEnderecoOperacional(
+            Long clienteId,
+            ClienteEnderecoRequest request,
+            String token
+    ) {
+        return coreClient.cadastrarEnderecoOperacional(clienteId, request, token);
+    }
 }

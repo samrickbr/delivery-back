@@ -1,16 +1,19 @@
 package br.com.inova.sigin.delivery.core.client;
 
+import br.com.inova.sigin.delivery.cliente.dto.*;
 import br.com.inova.sigin.delivery.configuracao.dto.ConfiguracaoSistemaResponse;
 import br.com.inova.sigin.delivery.core.config.CoreClientProperties;
 import br.com.inova.sigin.delivery.core.dto.*;
 import br.com.inova.sigin.delivery.core.exception.CoreIntegrationException;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-
-import br.com.inova.sigin.delivery.cliente.dto.ClienteEnderecoRequest;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -925,4 +928,84 @@ public class CoreClient {
         }
     }
 
+    public List<ClientePesquisaResponse> pesquisarClientes(String busca, String token) {
+        try {
+            return restClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/delivery/clientes")
+                            .queryParam("busca", busca)
+                            .build())
+                    .header(HttpHeaders.AUTHORIZATION, token)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<ClientePesquisaResponse>>() {
+                    });
+        } catch (RestClientResponseException e) {
+            throw new CoreIntegrationException(
+                    e.getStatusCode().value(),
+                    e.getResponseBodyAsString(),
+                    e
+            );
+        } catch (RestClientException e) {
+            throw new CoreIntegrationException(
+                    500,
+                    "Erro de comunicação com o Core ao pesquisar clientes.",
+                    e
+            );
+        }
+    }
+
+    public ClienteResponse cadastrarClienteOperacional(
+            ClienteOperacionalRequest request,
+            String token
+    ) {
+        try {
+            return restClient.post()
+                    .uri("/api/delivery/clientes/operacional")
+                    .header(HttpHeaders.AUTHORIZATION, token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(ClienteResponse.class);
+        } catch (RestClientResponseException e) {
+            throw new CoreIntegrationException(
+                    e.getStatusCode().value(),
+                    e.getResponseBodyAsString(),
+                    e
+            );
+        } catch (RestClientException e) {
+            throw new CoreIntegrationException(
+                    500,
+                    "Erro de comunicação com o Core ao cadastrar cliente operacional.",
+                    e
+            );
+        }
+    }
+
+    public ClienteEnderecoResponse cadastrarEnderecoOperacional(
+            Long clienteId,
+            ClienteEnderecoRequest request,
+            String token
+    ) {
+        try {
+            return restClient.post()
+                    .uri("/api/delivery/clientes/{clienteId}/enderecos", clienteId)
+                    .header(HttpHeaders.AUTHORIZATION, token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(ClienteEnderecoResponse.class);
+        } catch (RestClientResponseException e) {
+            throw new CoreIntegrationException(
+                    e.getStatusCode().value(),
+                    e.getResponseBodyAsString(),
+                    e
+            );
+        } catch (RestClientException e) {
+            throw new CoreIntegrationException(
+                    500,
+                    "Erro de comunicação com o Core ao cadastrar endereço.",
+                    e
+            );
+        }
+    }
 }
