@@ -8,6 +8,4 @@ public class CorePerfilResponse {
     private Long id;
 
     private String nome;
-
-    private String codigo;
 }

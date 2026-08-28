@@ -43,28 +43,49 @@ public class SecurityConfig {
                                 SessionCreationPolicy.STATELESS
                         )
                 )
-
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers(
-                                "/auth/**",
-                                "/cliente/**",
+                                "/auth/**"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                "/cliente/cadastro",
+                                "/cliente/login",
+                                "/cliente/me/**"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                "/cliente",
+                                "/cliente/operacional",
+                                "/cliente/*/enderecos"
+                        ).hasAuthority("DELIVERY_MINIPDV")
+
+                        .requestMatchers(
+                                "/balcao/**"
+                        ).hasAuthority("DELIVERY_BALCAO")
+
+                        .requestMatchers(
+                                "/cozinha/**"
+                        ).hasAuthority("DELIVERY_COZINHA")
+
+                        .requestMatchers(
+                                "/pizzaria/**"
+                        ).hasAuthority("DELIVERY_PIZZARIA")
+
+                        .requestMatchers(
+                                "/separacao/**"
+                        ).hasAuthority("DELIVERY_BALCAO")
+
+                        .requestMatchers(
                                 "/produtos/**",
                                 "/categorias/**",
                                 "/cardapio/**",
                                 "/pedidos/**"
                         ).permitAll()
 
-                        .requestMatchers(
-                                "/balcao/**",
-                                "/cozinha/**",
-                                "/pizzaria/**",
-                                "/separacao/**"
-                        ).authenticated()
-
                         .anyRequest().permitAll()
                 )
-
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class

@@ -46,21 +46,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     coreClient.buscarAutenticado(authorization);
 
             if (usuario == null || usuario.getId() == null) {
-                response.setStatus(
-                        HttpServletResponse.SC_UNAUTHORIZED
-                );
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
 
             if (Boolean.FALSE.equals(usuario.getAtivo())) {
-                response.setStatus(
-                        HttpServletResponse.SC_UNAUTHORIZED
-                );
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
 
             List<SimpleGrantedAuthority> authorities =
                     new ArrayList<>();
+
+            if (usuario.getPerfis() != null) {
+                usuario.getPerfis().forEach(perfil -> {
+
+                    if (perfil != null
+                            && perfil.getNome() != null
+                            && !perfil.getNome().isBlank()) {
+
+                        authorities.add(
+                                new SimpleGrantedAuthority(
+                                        perfil.getNome()
+                                )
+                        );
+                    }
+                });
+            }
 
             if (usuario.getPermissoes() != null) {
                 usuario.getPermissoes().forEach(permissao -> {
@@ -95,9 +107,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             SecurityContextHolder.clearContext();
 
+            exception.printStackTrace();
+
             response.setStatus(
                     HttpServletResponse.SC_UNAUTHORIZED
             );
         }
+
     }
 }

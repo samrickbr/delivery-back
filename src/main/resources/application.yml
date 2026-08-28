@@ -12,3 +12,7 @@ spring:
 
   flyway:
     enabled: true
+
+sigin:
+  cors:
+    allowed-origins: "*"
