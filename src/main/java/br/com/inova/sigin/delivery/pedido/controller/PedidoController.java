@@ -171,6 +171,12 @@ public class PedidoController {
     ) {
         return service.listarHistorico(id);
     }
+    @GetMapping("/{id}/situacao-financeira")
+    public PedidoSituacaoFinanceiraResponse consultarSituacaoFinanceira(
+            @PathVariable Long id
+    ) {
+        return service.consultarSituacaoFinanceira(id);
+    }
 
     @PutMapping("/{id}/cancelar-pedido")
     public PedidoResponse cancelarPedido(

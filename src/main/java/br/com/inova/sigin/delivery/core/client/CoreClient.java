@@ -5,6 +5,7 @@ import br.com.inova.sigin.delivery.configuracao.dto.ConfiguracaoSistemaResponse;
 import br.com.inova.sigin.delivery.core.config.CoreClientProperties;
 import br.com.inova.sigin.delivery.core.dto.*;
 import br.com.inova.sigin.delivery.core.exception.CoreIntegrationException;
+import br.com.inova.sigin.delivery.pedido.dto.PedidoSituacaoFinanceiraResponse;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -1005,6 +1006,48 @@ public class CoreClient {
                     500,
                     "Erro de comunicação com o Core ao cadastrar endereço.",
                     e
+            );
+        }
+    }
+    public PedidoSituacaoFinanceiraResponse consultarSituacaoFinanceira(
+            Long pedidoId
+    ) {
+        try {
+            return restClient.get()
+                    .uri(
+                            "/pedidos/{id}/situacao-financeira",
+                            pedidoId
+                    )
+                    .headers(headers ->
+                            headers.setBearerAuth(autenticar())
+                    )
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::is4xxClientError,
+                            (request, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core rejeitou a consulta da situação financeira do pedido. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .onStatus(
+                            HttpStatusCode::is5xxServerError,
+                            (request, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core apresentou erro interno ao consultar a situação financeira do pedido. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .body(PedidoSituacaoFinanceiraResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível consultar a situação financeira do pedido no SIGIN Core.",
+                    exception
             );
         }
     }

@@ -81,6 +81,14 @@ public class PedidoService {
         return consultaService.listarHistorico(pedidoId);
     }
 
+    public PedidoSituacaoFinanceiraResponse consultarSituacaoFinanceira(
+            Long pedidoId
+    ) {
+        return consultaService.consultarSituacaoFinanceira(
+                pedidoId
+        );
+    }
+
     // Operacao
 
     public PedidoResponse aprovar(

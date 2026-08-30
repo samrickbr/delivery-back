@@ -214,4 +214,10 @@ public class PedidoConsultaService {
 
         return autenticado;
     }
+
+    public PedidoSituacaoFinanceiraResponse consultarSituacaoFinanceira(
+            Long pedidoId
+    ) {
+        return coreClient.consultarSituacaoFinanceira(pedidoId);
+    }
 }
