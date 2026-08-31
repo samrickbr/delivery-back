@@ -35,7 +35,13 @@ public class PedidoCriacaoService {
             );
         }
 
-        Long clienteId = autenticado.getPessoa().getId();
+        Long clienteId = request.getClienteId();
+
+        if (clienteId == null) {
+            throw new IllegalArgumentException(
+                    "Cliente não informado."
+            );
+        }
 
         if (request.getItens() == null || request.getItens().isEmpty()) {
             throw new IllegalArgumentException(

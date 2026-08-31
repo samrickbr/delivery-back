@@ -7,6 +7,8 @@ import java.util.List;
 @Data
 public class PedidoRequest {
 
+    private Long clienteId;
+
     private String clienteNome;
 
     private String clienteWhatsapp;
