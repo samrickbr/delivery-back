@@ -35,12 +35,24 @@ public class PedidoCriacaoService {
             );
         }
 
-        Long clienteId = request.getClienteId();
+        Long clienteId;
 
-        if (clienteId == null) {
-            throw new IllegalArgumentException(
-                    "Cliente não informado."
-            );
+        if (Boolean.TRUE.equals(request.getVendaRapida())) {
+            clienteId = coreClient.buscarConsumidorFinal().getId();
+
+            if (clienteId == null) {
+                throw new IllegalStateException(
+                        "Consumidor Final não identificado no Core."
+                );
+            }
+        } else {
+            clienteId = request.getClienteId();
+
+            if (clienteId == null) {
+                throw new IllegalArgumentException(
+                        "Cliente não informado."
+                );
+            }
         }
 
         if (request.getItens() == null || request.getItens().isEmpty()) {

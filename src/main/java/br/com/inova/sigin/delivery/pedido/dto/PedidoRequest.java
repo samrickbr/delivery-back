@@ -9,6 +9,8 @@ public class PedidoRequest {
 
     private Long clienteId;
 
+    private Boolean vendaRapida;
+
     private String clienteNome;
 
     private String clienteWhatsapp;

@@ -1051,4 +1051,39 @@ public class CoreClient {
             );
         }
     }
+    public PessoaResponse buscarConsumidorFinal() {
+        try {
+            return restClient.get()
+                    .uri("/pessoas/consumidor-final")
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::is4xxClientError,
+                            (request, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core rejeitou a consulta do Consumidor Final. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .onStatus(
+                            HttpStatusCode::is5xxServerError,
+                            (request, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core apresentou erro interno ao consultar o Consumidor Final. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .body(PessoaResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível consultar o Consumidor Final no SIGIN Core.",
+                    exception
+            );
+        }
+    }
 }
