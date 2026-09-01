@@ -1,11 +1,13 @@
 package br.com.inova.sigin.delivery.cliente.dto;
 
 import br.com.inova.sigin.delivery.core.dto.PessoaEnderecoResponse;
-import lombok.Builder;
-import lombok.Data;
+import lombok.*;
 
 @Data
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
 public class ClienteEnderecoResponse {
 
     private Long id;

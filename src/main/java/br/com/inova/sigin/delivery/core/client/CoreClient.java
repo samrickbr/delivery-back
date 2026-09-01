@@ -528,7 +528,7 @@ public class CoreClient {
         } catch (CoreIntegrationException exception) {
             throw exception;
 
-        } catch (Exception exception) {
+        } catch  (Exception exception) {
             throw new CoreIntegrationException(
                     "Não foi possível autenticar o operador no SIGIN Core.",
                     exception
@@ -1083,6 +1083,29 @@ public class CoreClient {
             throw new CoreIntegrationException(
                     "Não foi possível consultar o Consumidor Final no SIGIN Core.",
                     exception
+            );
+        }
+    }
+
+    public List<ClienteEnderecoResponse> listarEnderecosOperacional(Long clienteId, String token) {
+        try {
+            return restClient.get()
+                    .uri("/pessoas/{pessoaId}/enderecos", clienteId)
+                    .header(HttpHeaders.AUTHORIZATION, token)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<ClienteEnderecoResponse>>() {
+                    });
+        } catch (RestClientResponseException e) {
+            throw new CoreIntegrationException(
+                    e.getStatusCode().value(),
+                    e.getResponseBodyAsString(),
+                    e
+            );
+        } catch (RestClientException e) {
+            throw new CoreIntegrationException(
+                    500,
+                    "Erro de comunicação com o Core ao listar endereços do cliente.",
+                    e
             );
         }
     }

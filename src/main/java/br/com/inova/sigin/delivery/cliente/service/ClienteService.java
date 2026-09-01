@@ -156,4 +156,8 @@ public class ClienteService {
     ) {
         return coreClient.cadastrarEnderecoOperacional(clienteId, request, token);
     }
+
+    public List<ClienteEnderecoResponse> listarEnderecosOperacional(Long clienteId, String token) {
+        return coreClient.listarEnderecosOperacional(clienteId, token);
+    }
 }

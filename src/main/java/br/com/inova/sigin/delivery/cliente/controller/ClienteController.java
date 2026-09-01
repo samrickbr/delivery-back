@@ -138,4 +138,17 @@ public class ClienteController {
                         token
                 ));
     }
+
+    @GetMapping("/{clienteId}/enderecos")
+    public ResponseEntity<List<ClienteEnderecoResponse>> listarEnderecosOperacional(
+            @PathVariable Long clienteId,
+            HttpServletRequest httpRequest
+    ) {
+        String token = httpRequest.getHeader(HttpHeaders.AUTHORIZATION);
+
+        return ResponseEntity.ok(service.listarEnderecosOperacional(
+                clienteId,
+                token
+        ));
+    }
 }
