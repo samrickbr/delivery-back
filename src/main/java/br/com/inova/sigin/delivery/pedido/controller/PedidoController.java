@@ -3,6 +3,7 @@ package br.com.inova.sigin.delivery.pedido.controller;
 import br.com.inova.sigin.delivery.pedido.dto.*;
 import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
 import br.com.inova.sigin.delivery.pedido.service.PedidoService;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -121,11 +122,13 @@ public class PedidoController {
     public List<PedidoBalcaoResponse> listarBalcao() {
         return service.listarBalcao();
     }
+
     @GetMapping("/{id}")
-    public PedidoResponse buscarPorId(
-            @PathVariable Long id
+    public PedidoConsultaResponse buscarPorId(
+            @PathVariable Long id,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String token
     ) {
-        return service.buscarPorId(id);
+        return service.buscarPorId(id, token);
     }
 
     @PutMapping("/{id}/separar")

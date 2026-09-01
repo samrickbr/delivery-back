@@ -3,6 +3,7 @@ package br.com.inova.sigin.delivery.pedido.service;
 import br.com.inova.sigin.delivery.core.client.CoreClient;
 import br.com.inova.sigin.delivery.core.dto.CoreAuthMeResponse;
 import br.com.inova.sigin.delivery.pedido.dto.*;
+import br.com.inova.sigin.delivery.pedido.entity.Pedido;
 import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
 import br.com.inova.sigin.delivery.pedido.mapper.PedidoMapper;
 import br.com.inova.sigin.delivery.pedido.repository.PedidoRepository;
@@ -14,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -214,14 +217,97 @@ public class PedidoConsultaService {
 
         return autenticado;
     }
-    public PedidoResponse buscarPorId(Long id) {
-        return repository.findById(id)
-                .map(mapper::toResponse)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Pedido não encontrado."
-                        )
-                );
+
+    public PedidoConsultaResponse buscarPorId(Long id, String token) {
+        Pedido pedido = repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Pedido não encontrado."));
+
+        br.com.inova.sigin.delivery.core.dto.PedidoResponse corePedido =
+                coreClient.buscarPedido(pedido.getCorePedidoId(), token);
+
+        List<PedidoItem> itensLocais = itemRepository.findByPedidoId(id);
+
+        Map<Long, PedidoItem> itensPorCoreId = itensLocais.stream()
+                .collect(Collectors.toMap(
+                        PedidoItem::getCoreItemId,
+                        item -> item
+                ));
+
+        List<PedidoConsultaResponse.ItemConsultaResponse> itens =
+                corePedido.itens().stream()
+                        .map(itemCore -> {
+                            PedidoItem itemLocal = itensPorCoreId.get(itemCore.id());
+
+                            return new PedidoConsultaResponse.ItemConsultaResponse(
+                                    itemCore.id(),
+                                    itemCore.id(),
+                                    itemCore.produtoId(),
+                                    itemCore.produto(),
+                                    itemCore.quantidade(),
+                                    itemCore.valorUnitario(),
+                                    itemCore.valorTotal(),
+                                    itemCore.setor(),
+
+                                    itemLocal != null
+                                            ? itemLocal.getStatusOperacao().name()
+                                            : null,
+
+                                    itemLocal != null
+                                            ? itemLocal.getSeparado()
+                                            : false,
+
+                                    itemLocal != null
+                                            ? itemLocal.getMotivoCancelamento()
+                                            : null,
+
+                                    itemLocal != null
+                                            ? itemLocal.getCanceladoEm()
+                                            : null,
+
+                                    itemLocal != null
+                                            ? itemLocal.getCanceladoPor()
+                                            : null
+                            );
+                        })
+                        .toList();
+
+        List<PedidoConsultaResponse.PagamentoConsultaResponse> pagamentos =
+                corePedido.pagamentos().stream()
+                        .map(pagamento -> new PedidoConsultaResponse.PagamentoConsultaResponse(
+                                pagamento.id(),
+                                pagamento.formaPagamentoId(),
+                                pagamento.valor()
+                        ))
+                        .toList();
+
+        return new PedidoConsultaResponse(
+                pedido.getId(),
+                pedido.getCorePedidoId(),
+                corePedido.numero(),
+
+                corePedido.clienteId(),
+                corePedido.cliente(),
+                corePedido.clienteWhatsapp(),
+
+                corePedido.endereco(),
+                corePedido.tipoRecebimento(),
+
+                corePedido.canalVendaId(),
+                corePedido.canalVenda(),
+
+                corePedido.dataPedido(),
+
+                corePedido.valorProdutos(),
+                corePedido.valorTotal(),
+                corePedido.taxaEntrega(),
+
+                corePedido.status(),
+                corePedido.ativo(),
+                corePedido.observacao(),
+
+                pagamentos,
+                itens
+        );
     }
 
     public PedidoSituacaoFinanceiraResponse consultarSituacaoFinanceira(

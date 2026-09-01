@@ -565,6 +565,36 @@ public class CoreClient {
         }
     }
 
+    public PedidoResponse buscarPedido(Long pedidoId, String token) {
+        try {
+            return restClient.get()
+                    .uri("/pedidos/{id}", pedidoId)
+                    .headers(headers -> headers.setBearerAuth(extrairToken(token)))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a consulta do pedido. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao consultar o pedido. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .body(PedidoResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível consultar o pedido no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+
     public PedidoResponse adicionarItem(
             Long pedidoId,
             br.com.inova.sigin.delivery.pedido.dto.PedidoItemRequest request
