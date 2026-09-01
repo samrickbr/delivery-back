@@ -214,6 +214,15 @@ public class PedidoConsultaService {
 
         return autenticado;
     }
+    public PedidoResponse buscarPorId(Long id) {
+        return repository.findById(id)
+                .map(mapper::toResponse)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Pedido não encontrado."
+                        )
+                );
+    }
 
     public PedidoSituacaoFinanceiraResponse consultarSituacaoFinanceira(
             Long pedidoId

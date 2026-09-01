@@ -121,6 +121,12 @@ public class PedidoController {
     public List<PedidoBalcaoResponse> listarBalcao() {
         return service.listarBalcao();
     }
+    @GetMapping("/{id}")
+    public PedidoResponse buscarPorId(
+            @PathVariable Long id
+    ) {
+        return service.buscarPorId(id);
+    }
 
     @PutMapping("/{id}/separar")
     public PedidoResponse separar(
@@ -250,5 +256,49 @@ public class PedidoController {
             @PathVariable Long itemId
     ) {
         return service.finalizarItem(pedidoId, itemId);
+    }
+    @PostMapping("/{pedidoId}/itens")
+    @ResponseStatus(HttpStatus.OK)
+    public PedidoResponse adicionarItem(
+            @PathVariable Long pedidoId,
+            @RequestBody PedidoItemRequest request
+    ) {
+        return service.adicionarItem(pedidoId, request);
+    }
+
+    @PutMapping("/{pedidoId}/itens/{itemId}/quantidade")
+    public PedidoResponse alterarQuantidadeItem(
+            @PathVariable Long pedidoId,
+            @PathVariable Long itemId,
+            @RequestBody PedidoItemRequest request
+    ) {
+        return service.alterarQuantidadeItem(
+                pedidoId,
+                itemId,
+                request
+        );
+    }
+
+    @DeleteMapping("/{pedidoId}/itens/{itemId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removerItem(
+            @PathVariable Long pedidoId,
+            @PathVariable Long itemId
+    ) {
+        service.removerItem(pedidoId, itemId);
+    }
+    @PostMapping("/{id}/pagamentos")
+    public PedidoResponse adicionarPagamento(
+            @PathVariable Long id,
+            @RequestBody PedidoPagamentoRequest request
+    ) {
+        return service.adicionarPagamento(id, request);
+    }
+
+    @PostMapping("/{id}/faturar")
+    public PedidoResponse faturar(
+            @PathVariable Long id
+    ) {
+        return service.faturar(id);
     }
 }

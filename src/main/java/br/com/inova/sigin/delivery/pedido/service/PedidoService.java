@@ -17,6 +17,7 @@ public class PedidoService {
     private final PedidoCancelamentoService cancelamentoService;
     private final PedidoEntregaService entregaService;
     private final PedidoItemOperacaoService itemOperacaoService;
+    private final PedidoComercialService comercialService;
 
     // Criacao
 
@@ -80,7 +81,6 @@ public class PedidoService {
     public List<PedidoHistoricoResponse> listarHistorico(Long pedidoId) {
         return consultaService.listarHistorico(pedidoId);
     }
-
     public PedidoSituacaoFinanceiraResponse consultarSituacaoFinanceira(
             Long pedidoId
     ) {
@@ -250,5 +250,56 @@ public class PedidoService {
                 pedidoId,
                 itemId
         );
+    }
+    // Comercial
+
+    public PedidoResponse buscarPorId(Long id) {
+        return comercialService.buscarPorId(id);
+    }
+
+    public PedidoResponse adicionarItem(
+            Long pedidoId,
+            PedidoItemRequest request
+    ) {
+        return comercialService.adicionarItem(
+                pedidoId,
+                request
+        );
+    }
+
+    public PedidoResponse alterarQuantidadeItem(
+            Long pedidoId,
+            Long itemId,
+            PedidoItemRequest request
+    ) {
+        return comercialService.alterarQuantidadeItem(
+                pedidoId,
+                itemId,
+                request
+        );
+    }
+
+    public void removerItem(
+            Long pedidoId,
+            Long itemId
+    ) {
+        comercialService.removerItem(
+                pedidoId,
+                itemId
+        );
+    }
+
+    public PedidoResponse adicionarPagamento(
+            Long pedidoId,
+            PedidoPagamentoRequest request
+    ) {
+        return comercialService.adicionarPagamento(
+                pedidoId,
+                request
+        );
+    }
+
+    public PedidoResponse faturar(Long pedidoId) {
+        return comercialService.faturar(pedidoId);
     }
 }

@@ -14,6 +14,10 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +43,11 @@ public class PedidoProjecaoService {
                 .orElse(null);
 
         if (existente != null) {
-            return pedidoMapper.toResponse(existente);
+            sincronizarPedido(existente, coreResponse, clienteWhatsapp);
+
+            return pedidoMapper.toResponse(
+                    pedidoRepository.save(existente)
+            );
         }
 
         if (coreResponse.itens() == null || coreResponse.itens().isEmpty()) {
@@ -80,12 +88,111 @@ public class PedidoProjecaoService {
         );
     }
 
+    private void sincronizarPedido(
+            Pedido pedido,
+            PedidoResponse coreResponse,
+            String clienteWhatsapp
+    ) {
+
+        pedido.setClienteId(coreResponse.clienteId());
+        pedido.setClienteNome(extrairClienteNome(coreResponse));
+
+        if (clienteWhatsapp != null) {
+            pedido.setClienteWhatsapp(clienteWhatsapp);
+        }
+
+        pedido.setTipoRecebimento(coreResponse.tipoRecebimento());
+        pedido.setValorProdutos(coreResponse.valorProdutos());
+        pedido.setTaxaEntrega(coreResponse.taxaEntrega());
+        pedido.setValorTotal(coreResponse.valorTotal());
+        pedido.setObservacao(coreResponse.observacao());
+
+        sincronizarItens(pedido, coreResponse);
+    }
+
+    private void sincronizarItens(
+            Pedido pedido,
+            PedidoResponse coreResponse
+    ) {
+
+        if (coreResponse.itens() == null) {
+            return;
+        }
+
+        Map<Long, PedidoItem> itensExistentes = new HashMap<>();
+
+        for (PedidoItem item : pedido.getItens()) {
+            if (item.getCoreItemId() != null) {
+                itensExistentes.put(
+                        item.getCoreItemId(),
+                        item
+                );
+            }
+        }
+
+        Set<Long> idsRecebidosDoCore = new HashSet<>();
+
+        for (PedidoItemResponse coreItem : coreResponse.itens()) {
+
+            if (coreItem == null || coreItem.id() == null) {
+                throw new IllegalStateException(
+                        "Item do pedido do SIGIN Core sem ID."
+                );
+            }
+
+            PedidoItem item = itensExistentes.get(coreItem.id());
+
+            if (item != null) {
+                atualizarDadosComerciais(item, coreItem);
+            } else {
+                item = projetarItem(coreItem, pedido);
+                pedido.getItens().add(item);
+            }
+
+            idsRecebidosDoCore.add(coreItem.id());
+        }
+
+        pedido.getItens().removeIf(item ->
+                item.getCoreItemId() != null
+                        && !idsRecebidosDoCore.contains(item.getCoreItemId())
+        );
+    }
+
+    private void atualizarDadosComerciais(
+            PedidoItem item,
+            PedidoItemResponse coreItem
+    ) {
+
+        if (coreItem.produtoId() == null) {
+            throw new IllegalStateException(
+                    "Item do pedido do SIGIN Core sem produtoId."
+            );
+        }
+
+        item.setCoreProdutoId(coreItem.produtoId());
+        item.setProdutoNome(coreItem.produto());
+        item.setQuantidade(
+                converterQuantidade(coreItem.quantidade())
+        );
+        item.setValorUnitario(coreItem.valorUnitario());
+        item.setValorTotal(coreItem.valorTotal());
+        item.setSetor(coreItem.setor());
+
+        // Estado operacional permanece intacto.
+    }
+
     private PedidoItem projetarItem(
             PedidoItemResponse coreItem,
             Pedido pedido
     ) {
 
-        if (coreItem == null || coreItem.produtoId() == null) {
+        if (coreItem == null || coreItem.id() == null) {
+            throw new IllegalStateException(
+                    "Item do pedido do SIGIN Core sem ID."
+            );
+        }
+
+        if (coreItem.produtoId() == null) {
             throw new IllegalStateException(
                     "Item do pedido do SIGIN Core sem produtoId."
             );
@@ -93,6 +200,7 @@ public class PedidoProjecaoService {
 
         return PedidoItem.builder()
                 .pedido(pedido)
+                .coreItemId(coreItem.id())
                 .coreProdutoId(coreItem.produtoId())
                 .produtoNome(coreItem.produto())
                 .quantidade(

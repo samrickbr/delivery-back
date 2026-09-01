@@ -21,6 +21,15 @@ public class PedidoItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * Referência técnica ao item oficial do pedido no SIGIN Core.
+     *
+     * Permite sincronizar o item comercial sem perder
+     * o estado operacional mantido pelo Delivery.
+     */
+    @Column(name = "core_item_id", nullable = false)
+    private Long coreItemId;
+
     @ManyToOne
     @JoinColumn(name = "pedido_id")
     private Pedido pedido;

@@ -61,13 +61,6 @@ public class PedidoCriacaoService {
             );
         }
 
-        if (request.getPagamentos() == null
-                || request.getPagamentos().isEmpty()) {
-            throw new IllegalArgumentException(
-                    "O pedido deve possuir pelo menos um pagamento."
-            );
-        }
-
         String tipoRecebimento = request.getTipoRecebimento();
 
         if (tipoRecebimento == null || tipoRecebimento.isBlank()) {
@@ -107,7 +100,9 @@ public class PedidoCriacaoService {
                 .toList();
 
         List<PedidoPagamentoRequest> pagamentos =
-                request.getPagamentos()
+                request.getPagamentos() == null
+                        ? List.of()
+                        : request.getPagamentos()
                         .stream()
                         .map(pagamento -> new PedidoPagamentoRequest(
                                 pagamento.getFormaPagamentoId(),

@@ -535,6 +535,207 @@ public class CoreClient {
             );
         }
     }
+    public PedidoResponse buscarPedido(Long pedidoId) {
+        try {
+            return restClient.get()
+                    .uri("/pedidos/{id}", pedidoId)
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a consulta do pedido. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao consultar o pedido. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .body(PedidoResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível consultar o pedido no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+
+    public PedidoResponse adicionarItem(
+            Long pedidoId,
+            br.com.inova.sigin.delivery.pedido.dto.PedidoItemRequest request
+    ) {
+        try {
+            return restClient.post()
+                    .uri("/pedidos/{pedidoId}/itens", pedidoId)
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .body(request)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (httpRequest, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a adição do item. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (httpRequest, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao adicionar o item. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .body(PedidoResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível adicionar o item no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+
+    public PedidoResponse alterarQuantidadeItem(
+            Long pedidoId,
+            Long itemId,
+            BigDecimal quantidade
+    ) {
+        try {
+            return restClient.put()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/pedidos/{pedidoId}/itens/{itemId}/quantidade")
+                            .queryParam("quantidade", quantidade)
+                            .build(pedidoId, itemId))
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a alteração da quantidade do item. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao alterar a quantidade do item. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .body(PedidoResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível alterar a quantidade do item no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+
+    public void removerItem(
+            Long pedidoId,
+            Long itemId
+    ) {
+        try {
+            restClient.delete()
+                    .uri(
+                            "/pedidos/{pedidoId}/itens/{itemId}",
+                            pedidoId,
+                            itemId
+                    )
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou a remoção do item. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao remover o item. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .toBodilessEntity();
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível remover o item no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+
+    public PedidoResponse adicionarPagamento(
+            Long pedidoId,
+            br.com.inova.sigin.delivery.pedido.dto.PedidoPagamentoRequest request
+    ) {
+        try {
+            return restClient.post()
+                    .uri("/pedidos/{id}/pagamentos", pedidoId)
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .body(request)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (httpRequest, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou o pagamento do pedido. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (httpRequest, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao registrar o pagamento. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .body(PedidoResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível registrar o pagamento no SIGIN Core.",
+                    exception
+            );
+        }
+    }
+
+    public PedidoResponse faturarPedido(Long pedidoId) {
+        try {
+            return restClient.post()
+                    .uri("/pedidos/{id}/faturar", pedidoId)
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core rejeitou o faturamento do pedido. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new CoreIntegrationException(
+                                "SIGIN Core apresentou erro interno ao faturar o pedido. HTTP "
+                                        + response.getStatusCode().value()
+                        );
+                    })
+                    .body(PedidoResponse.class);
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível faturar o pedido no SIGIN Core.",
+                    exception
+            );
+        }
+    }
     private String autenticar() {
         try {
             CoreLoginRequest request = new CoreLoginRequest(
