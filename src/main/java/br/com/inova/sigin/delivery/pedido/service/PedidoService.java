@@ -253,8 +253,8 @@ public class PedidoService {
     }
     // Comercial
 
-    public PedidoConsultaResponse buscarPorId(Long id, String token) {
-        return consultaService.buscarPorId(id, token);
+    public PedidoConsultaResponse buscarPorId(Long id, String authorization) {
+        return consultaService.buscarPorId(id, authorization);
     }
 
     public PedidoResponse adicionarItem(

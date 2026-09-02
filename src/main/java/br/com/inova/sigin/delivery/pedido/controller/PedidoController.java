@@ -8,7 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+import jakarta.servlet.http.HttpServletRequest;
 @RestController
 @RequestMapping("/pedidos")
 public class PedidoController {
@@ -126,9 +126,9 @@ public class PedidoController {
     @GetMapping("/{id}")
     public PedidoConsultaResponse buscarPorId(
             @PathVariable Long id,
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String token
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization
     ) {
-        return service.buscarPorId(id, token);
+        return service.buscarPorId(id, authorization);
     }
 
     @PutMapping("/{id}/separar")

@@ -218,12 +218,12 @@ public class PedidoConsultaService {
         return autenticado;
     }
 
-    public PedidoConsultaResponse buscarPorId(Long id, String token) {
+    public PedidoConsultaResponse buscarPorId(Long id, String authorization) {
         Pedido pedido = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Pedido não encontrado."));
 
         br.com.inova.sigin.delivery.core.dto.PedidoResponse corePedido =
-                coreClient.buscarPedido(pedido.getCorePedidoId(), token);
+                coreClient.buscarPedidoAutenticado(pedido.getCorePedidoId(), authorization);
 
         List<PedidoItem> itensLocais = itemRepository.findByPedidoId(id);
 

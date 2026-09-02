@@ -541,10 +541,10 @@ public class CoreClient {
                     .uri("/pedidos/{id}", pedidoId)
                     .headers(headers -> headers.setBearerAuth(autenticar()))
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, responseHttp) -> {
                         throw new CoreIntegrationException(
                                 "SIGIN Core rejeitou a consulta do pedido. HTTP "
-                                        + response.getStatusCode().value()
+                                        + responseHttp.getStatusCode().value()
                         );
                     })
                     .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
@@ -565,32 +565,28 @@ public class CoreClient {
         }
     }
 
-    public PedidoResponse buscarPedido(Long pedidoId, String token) {
+    public PedidoResponse buscarPedidoAutenticado(Long pedidoId, String token) {
+        System.out.println("=== DEBUG buscarPedidoAutenticado ===");
+        System.out.println("pedidoId = " + pedidoId);
+        System.out.println("token recebido = " + token);
+        System.out.println("token extraído = " + extrairToken(token));
+
         try {
             return restClient.get()
                     .uri("/pedidos/{id}", pedidoId)
-                    .headers(headers -> headers.setBearerAuth(extrairToken(token)))
+                    .headers(headers ->
+                            headers.setBearerAuth(extrairToken(token))
+                    )
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                        throw new CoreIntegrationException(
-                                "SIGIN Core rejeitou a consulta do pedido. HTTP "
-                                        + response.getStatusCode().value()
-                        );
-                    })
-                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                        throw new CoreIntegrationException(
-                                "SIGIN Core apresentou erro interno ao consultar o pedido. HTTP "
-                                        + response.getStatusCode().value()
-                        );
-                    })
                     .body(PedidoResponse.class);
 
-        } catch (CoreIntegrationException exception) {
-            throw exception;
-        } catch (Exception exception) {
+        } catch (RestClientResponseException e) {
+            System.out.println("=== CORE RESPONDEU ===");
+            System.out.println("HTTP = " + e.getStatusCode());
+            System.out.println("BODY = " + e.getResponseBodyAsString());
             throw new CoreIntegrationException(
-                    "Não foi possível consultar o pedido no SIGIN Core.",
-                    exception
+                    "SIGIN Core rejeitou a consulta do pedido. HTTP "
+                            + e.getStatusCode().value()
             );
         }
     }
