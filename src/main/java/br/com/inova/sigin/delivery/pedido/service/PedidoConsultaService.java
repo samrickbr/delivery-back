@@ -266,9 +266,16 @@ public class PedidoConsultaService {
 
         List<PedidoConsultaResponse.ItemConsultaResponse> itens =
                 corePedido.itens().stream()
-                        .filter(itemCore ->
-                                Boolean.TRUE.equals(itemCore.ativo())
-                        )
+                        .filter(itemCore -> {
+                            if (!Boolean.TRUE.equals(itemCore.ativo())) {
+                                return false;
+                            }
+
+                            PedidoItem itemLocal = itensPorCoreId.get(itemCore.id());
+
+                            return itemLocal == null
+                                    || itemLocal.getStatusOperacao() != StatusOperacao.CANCELADO;
+                        })
                         .map(itemCore -> {
                             PedidoItem itemLocal =
                                     itensPorCoreId.get(itemCore.id());
