@@ -48,6 +48,7 @@ public record PedidoConsultaResponse(
             BigDecimal valorUnitario,
             BigDecimal valorTotal,
             String setor,
+            Boolean ativo,
 
             String statusOperacao,
             Boolean separado,

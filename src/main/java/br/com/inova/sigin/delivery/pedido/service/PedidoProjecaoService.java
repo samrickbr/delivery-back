@@ -120,7 +120,8 @@ public class PedidoProjecaoService {
         }
 
         Map<Long, PedidoItem> itensPorCoreId = new HashMap<>();
-        Map<Long, java.util.List<PedidoItem>> itensLegadosPorProduto = new HashMap<>();
+        Map<Long, java.util.List<PedidoItem>> itensLegadosPorProduto =
+                new HashMap<>();
 
         for (PedidoItem item : pedido.getItens()) {
 
@@ -154,12 +155,22 @@ public class PedidoProjecaoService {
 
             PedidoItem item = itensPorCoreId.get(coreItem.id());
 
+            /*
+             * Compatibilidade com registros legados.
+             *
+             * O casamento por produto só é utilizado para itens antigos
+             * que ainda não possuem coreItemId.
+             *
+             * Depois da vinculação, coreItemId passa a ser a identidade
+             * definitiva do item.
+             */
             if (item == null && coreItem.produtoId() != null) {
 
                 java.util.List<PedidoItem> candidatos =
                         itensLegadosPorProduto.get(coreItem.produtoId());
 
                 if (candidatos != null && !candidatos.isEmpty()) {
+
                     item = candidatos.remove(0);
 
                     item.setCoreItemId(coreItem.id());
@@ -187,6 +198,13 @@ public class PedidoProjecaoService {
             idsRecebidosDoCore.add(coreItem.id());
         }
 
+        /*
+         * Remove somente itens que já possuem identidade no Core
+         * e deixaram de existir na resposta atual.
+         *
+         * Registros legados ainda não vinculados permanecem intactos
+         * para permitir a reconciliação.
+         */
         pedido.getItens().removeIf(item ->
                 item.getCoreItemId() != null
                         && !idsRecebidosDoCore.contains(item.getCoreItemId())
@@ -250,7 +268,11 @@ public class PedidoProjecaoService {
                 .valorTotal(coreItem.valorTotal())
                 .setor(coreItem.setor())
                 .separado(false)
-                .statusOperacao(StatusOperacao.PENDENTE)
+                .statusOperacao(
+                        Boolean.FALSE.equals(coreItem.ativo())
+                                ? StatusOperacao.CANCELADO
+                                : StatusOperacao.PENDENTE
+                )
                 .build();
     }
 

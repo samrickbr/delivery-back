@@ -266,6 +266,9 @@ public class PedidoConsultaService {
 
         List<PedidoConsultaResponse.ItemConsultaResponse> itens =
                 corePedido.itens().stream()
+                        .filter(itemCore ->
+                                Boolean.TRUE.equals(itemCore.ativo())
+                        )
                         .map(itemCore -> {
                             PedidoItem itemLocal =
                                     itensPorCoreId.get(itemCore.id());
@@ -279,6 +282,8 @@ public class PedidoConsultaService {
                                     itemCore.valorUnitario(),
                                     itemCore.valorTotal(),
                                     itemCore.setor(),
+
+                                    itemCore.ativo(),
 
                                     itemLocal != null
                                             ? itemLocal.getStatusOperacao().name()
