@@ -9,6 +9,7 @@ public record PedidoItemResponse(
         BigDecimal quantidade,
         BigDecimal valorUnitario,
         BigDecimal valorTotal,
-        String setor
+        String setor,
+        Boolean ativo
 ) {
 }

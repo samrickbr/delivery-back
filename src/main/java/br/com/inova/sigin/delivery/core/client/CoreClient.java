@@ -625,31 +625,41 @@ public class CoreClient {
             br.com.inova.sigin.delivery.pedido.dto.PedidoItemRequest request
     ) {
         try {
-            return restClient.post()
+            restClient.post()
                     .uri("/pedidos/{pedidoId}/itens", pedidoId)
-                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .headers(headers ->
+                            headers.setBearerAuth(autenticar())
+                    )
                     .body(request)
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (httpRequest, response) -> {
-                        throw new CoreIntegrationException(
-                                "SIGIN Core rejeitou a adição do item. HTTP "
-                                        + response.getStatusCode().value()
-                        );
-                    })
-                    .onStatus(HttpStatusCode::is5xxServerError, (httpRequest, response) -> {
-                        throw new CoreIntegrationException(
-                                "SIGIN Core apresentou erro interno ao adicionar o item. HTTP "
-                                        + response.getStatusCode().value()
-                        );
-                    })
-                    .body(PedidoResponse.class);
+                    .onStatus(
+                            HttpStatusCode::is4xxClientError,
+                            (httpRequest, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core rejeitou a adição do item. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .onStatus(
+                            HttpStatusCode::is5xxServerError,
+                            (httpRequest, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core falhou ao adicionar o item. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .toBodilessEntity();
 
-        } catch (CoreIntegrationException exception) {
-            throw exception;
-        } catch (Exception exception) {
+            return buscarPedido(pedidoId);
+
+        } catch (CoreIntegrationException e) {
+            throw e;
+        } catch (Exception e) {
             throw new CoreIntegrationException(
-                    "Não foi possível adicionar o item no SIGIN Core.",
-                    exception
+                    "Erro ao adicionar item no SIGIN Core.",
+                    e
             );
         }
     }
@@ -660,26 +670,66 @@ public class CoreClient {
             BigDecimal quantidade
     ) {
         try {
-            return restClient.put()
+            restClient.put()
                     .uri(uriBuilder -> uriBuilder
                             .path("/pedidos/{pedidoId}/itens/{itemId}/quantidade")
                             .queryParam("quantidade", quantidade)
                             .build(pedidoId, itemId))
-                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .headers(headers ->
+                            headers.setBearerAuth(autenticar())
+                    )
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                        throw new CoreIntegrationException(
-                                "SIGIN Core rejeitou a alteração da quantidade do item. HTTP "
-                                        + response.getStatusCode().value()
-                        );
-                    })
-                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                        throw new CoreIntegrationException(
-                                "SIGIN Core apresentou erro interno ao alterar a quantidade do item. HTTP "
-                                        + response.getStatusCode().value()
-                        );
-                    })
-                    .body(PedidoResponse.class);
+                    .onStatus(
+                            HttpStatusCode::is4xxClientError,
+                            (request, response) -> {
+                                String corpo = "";
+
+                                try {
+                                    if (response.getBody() != null) {
+                                        corpo = new String(
+                                                response.getBody().readAllBytes(),
+                                                java.nio.charset.StandardCharsets.UTF_8
+                                        );
+                                    }
+                                } catch (Exception ignored) {
+                                }
+
+                                throw new CoreIntegrationException(
+                                        extrairMensagemErro(
+                                                corpo,
+                                                "SIGIN Core rejeitou a alteração da quantidade do item. HTTP "
+                                                        + response.getStatusCode().value()
+                                        )
+                                );
+                            }
+                    )
+                    .onStatus(
+                            HttpStatusCode::is5xxServerError,
+                            (request, response) -> {
+                                String corpo = "";
+
+                                try {
+                                    if (response.getBody() != null) {
+                                        corpo = new String(
+                                                response.getBody().readAllBytes(),
+                                                java.nio.charset.StandardCharsets.UTF_8
+                                        );
+                                    }
+                                } catch (Exception ignored) {
+                                }
+
+                                throw new CoreIntegrationException(
+                                        extrairMensagemErro(
+                                                corpo,
+                                                "SIGIN Core apresentou erro interno ao alterar a quantidade do item. HTTP "
+                                                        + response.getStatusCode().value()
+                                        )
+                                );
+                            }
+                    )
+                    .toBodilessEntity();
+
+            return buscarPedido(pedidoId);
 
         } catch (CoreIntegrationException exception) {
             throw exception;

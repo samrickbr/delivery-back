@@ -119,14 +119,26 @@ public class PedidoProjecaoService {
             return;
         }
 
-        Map<Long, PedidoItem> itensExistentes = new HashMap<>();
+        Map<Long, PedidoItem> itensPorCoreId = new HashMap<>();
+        Map<Long, java.util.List<PedidoItem>> itensLegadosPorProduto = new HashMap<>();
 
         for (PedidoItem item : pedido.getItens()) {
+
             if (item.getCoreItemId() != null) {
-                itensExistentes.put(
+                itensPorCoreId.put(
                         item.getCoreItemId(),
                         item
                 );
+                continue;
+            }
+
+            if (item.getCoreProdutoId() != null) {
+                itensLegadosPorProduto
+                        .computeIfAbsent(
+                                item.getCoreProdutoId(),
+                                key -> new java.util.ArrayList<>()
+                        )
+                        .add(item);
             }
         }
 
@@ -140,7 +152,30 @@ public class PedidoProjecaoService {
                 );
             }
 
-            PedidoItem item = itensExistentes.get(coreItem.id());
+            PedidoItem item = itensPorCoreId.get(coreItem.id());
+
+            if (item == null && coreItem.produtoId() != null) {
+
+                java.util.List<PedidoItem> candidatos =
+                        itensLegadosPorProduto.get(coreItem.produtoId());
+
+                if (candidatos != null && !candidatos.isEmpty()) {
+                    item = candidatos.remove(0);
+
+                    item.setCoreItemId(coreItem.id());
+
+                    itensPorCoreId.put(
+                            coreItem.id(),
+                            item
+                    );
+
+                    if (candidatos.isEmpty()) {
+                        itensLegadosPorProduto.remove(
+                                coreItem.produtoId()
+                        );
+                    }
+                }
+            }
 
             if (item != null) {
                 atualizarDadosComerciais(item, coreItem);
@@ -178,7 +213,12 @@ public class PedidoProjecaoService {
         item.setValorTotal(coreItem.valorTotal());
         item.setSetor(coreItem.setor());
 
-        // Estado operacional permanece intacto.
+        if (Boolean.FALSE.equals(coreItem.ativo())
+                && item.getStatusOperacao() == StatusOperacao.PENDENTE) {
+            item.setStatusOperacao(StatusOperacao.CANCELADO);
+        }
+
+        // Estado operacional permanece intacto para itens ativos.
     }
 
     private PedidoItem projetarItem(

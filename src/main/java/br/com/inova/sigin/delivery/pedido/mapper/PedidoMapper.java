@@ -46,8 +46,11 @@ public class PedidoMapper {
 
         return ItemOperacaoResponse.builder()
                 .id(item.getId())
+                .produtoId(item.getCoreProdutoId())
                 .produto(item.getProdutoNome())
                 .quantidade(item.getQuantidade())
+                .valorUnitario(item.getValorUnitario())
+                .valorTotal(item.getValorTotal())
                 .categoria(null)
                 .setor(item.getSetor())
                 .statusOperacao(item.getStatusOperacao().name())

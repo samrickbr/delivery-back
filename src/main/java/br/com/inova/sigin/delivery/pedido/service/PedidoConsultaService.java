@@ -258,6 +258,7 @@ public class PedidoConsultaService {
                 itemRepository.findByPedidoId(pedido.getId());
 
         Map<Long, PedidoItem> itensPorCoreId = itensLocais.stream()
+                .filter(item -> item.getCoreItemId() != null)
                 .collect(Collectors.toMap(
                         PedidoItem::getCoreItemId,
                         item -> item
@@ -270,7 +271,7 @@ public class PedidoConsultaService {
                                     itensPorCoreId.get(itemCore.id());
 
                             return new PedidoConsultaResponse.ItemConsultaResponse(
-                                    itemCore.id(),
+                                    itemLocal != null ? itemLocal.getId() : null,
                                     itemCore.id(),
                                     itemCore.produtoId(),
                                     itemCore.produto(),
