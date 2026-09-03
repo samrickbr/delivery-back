@@ -566,10 +566,6 @@ public class CoreClient {
     }
 
     public PedidoResponse buscarPedidoAutenticado(Long pedidoId, String token) {
-        System.out.println("=== DEBUG buscarPedidoAutenticado ===");
-        System.out.println("pedidoId = " + pedidoId);
-        System.out.println("token recebido = " + token);
-        System.out.println("token extraído = " + extrairToken(token));
 
         try {
             return restClient.get()
@@ -581,9 +577,6 @@ public class CoreClient {
                     .body(PedidoResponse.class);
 
         } catch (RestClientResponseException e) {
-            System.out.println("=== CORE RESPONDEU ===");
-            System.out.println("HTTP = " + e.getStatusCode());
-            System.out.println("BODY = " + e.getResponseBodyAsString());
             throw new CoreIntegrationException(
                     "SIGIN Core rejeitou a consulta do pedido. HTTP "
                             + e.getStatusCode().value()
@@ -591,6 +584,42 @@ public class CoreClient {
         }
     }
 
+    public List<PedidoResponse> listarPedidos() {
+        try {
+            return restClient.get()
+                    .uri("/pedidos")
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::is4xxClientError,
+                            (request, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core rejeitou a consulta dos pedidos. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .onStatus(
+                            HttpStatusCode::is5xxServerError,
+                            (request, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core apresentou erro interno ao consultar os pedidos. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .body(new ParameterizedTypeReference<List<PedidoResponse>>() {
+                    });
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível consultar os pedidos no SIGIN Core.",
+                    exception
+            );
+        }
+    }
     public PedidoResponse adicionarItem(
             Long pedidoId,
             br.com.inova.sigin.delivery.pedido.dto.PedidoItemRequest request

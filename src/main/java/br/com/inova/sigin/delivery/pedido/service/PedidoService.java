@@ -33,6 +33,9 @@ public class PedidoService {
     public List<PedidoResponse> listar() {
         return consultaService.listar();
     }
+    public List<PedidoConsultaResponse> listarAbertos() {
+        return consultaService.listarAbertos();
+    }
 
     public List<PedidoResponse> listarPorStatus(StatusPedido status) {
         return consultaService.listarPorStatus(status);

@@ -65,6 +65,11 @@ public class PedidoController {
         return service.listar();
     }
 
+    @GetMapping("/abertos")
+    public List<PedidoConsultaResponse> listarAbertos() {
+        return service.listarAbertos();
+    }
+
     @GetMapping("/status/{status}")
     public List<PedidoResponse> listarPorStatus(
             @PathVariable StatusPedido status

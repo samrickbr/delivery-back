@@ -200,6 +200,23 @@ public class PedidoConsultaService {
                 .toList();
     }
 
+    public List<PedidoConsultaResponse> listarAbertos() {
+        return coreClient.listarPedidos()
+                .stream()
+                .filter(corePedido ->
+                        "ABERTO".equalsIgnoreCase(corePedido.status())
+                )
+                .map(corePedido ->
+                        repository.findByCorePedidoId(corePedido.id())
+                                .map(pedidoLocal ->
+                                        montarConsulta(pedidoLocal, corePedido)
+                                )
+                                .orElse(null)
+                )
+                .filter(java.util.Objects::nonNull)
+                .toList();
+    }
+
     private CoreAuthMeResponse buscarUsuarioAutenticado(String authorization) {
         CoreAuthMeResponse autenticado = coreClient.buscarAutenticado(authorization);
 
@@ -220,12 +237,25 @@ public class PedidoConsultaService {
 
     public PedidoConsultaResponse buscarPorId(Long id, String authorization) {
         Pedido pedido = repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Pedido não encontrado."));
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Pedido não encontrado.")
+                );
 
         br.com.inova.sigin.delivery.core.dto.PedidoResponse corePedido =
-                coreClient.buscarPedidoAutenticado(pedido.getCorePedidoId(), authorization);
+                coreClient.buscarPedidoAutenticado(
+                        pedido.getCorePedidoId(),
+                        authorization
+                );
 
-        List<PedidoItem> itensLocais = itemRepository.findByPedidoId(id);
+        return montarConsulta(pedido, corePedido);
+    }
+
+    private PedidoConsultaResponse montarConsulta(
+            Pedido pedido,
+            br.com.inova.sigin.delivery.core.dto.PedidoResponse corePedido
+    ) {
+        List<PedidoItem> itensLocais =
+                itemRepository.findByPedidoId(pedido.getId());
 
         Map<Long, PedidoItem> itensPorCoreId = itensLocais.stream()
                 .collect(Collectors.toMap(
@@ -236,7 +266,8 @@ public class PedidoConsultaService {
         List<PedidoConsultaResponse.ItemConsultaResponse> itens =
                 corePedido.itens().stream()
                         .map(itemCore -> {
-                            PedidoItem itemLocal = itensPorCoreId.get(itemCore.id());
+                            PedidoItem itemLocal =
+                                    itensPorCoreId.get(itemCore.id());
 
                             return new PedidoConsultaResponse.ItemConsultaResponse(
                                     itemCore.id(),
@@ -273,11 +304,13 @@ public class PedidoConsultaService {
 
         List<PedidoConsultaResponse.PagamentoConsultaResponse> pagamentos =
                 corePedido.pagamentos().stream()
-                        .map(pagamento -> new PedidoConsultaResponse.PagamentoConsultaResponse(
-                                pagamento.id(),
-                                pagamento.formaPagamentoId(),
-                                pagamento.valor()
-                        ))
+                        .map(pagamento ->
+                                new PedidoConsultaResponse.PagamentoConsultaResponse(
+                                        pagamento.id(),
+                                        pagamento.formaPagamentoId(),
+                                        pagamento.valor()
+                                )
+                        )
                         .toList();
 
         return new PedidoConsultaResponse(
