@@ -12,6 +12,8 @@ public class PedidoBalcaoResponse {
 
     private Long id;
 
+    private String numero;
+
     private String clienteNome;
 
     private String status;

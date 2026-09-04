@@ -28,6 +28,17 @@ public class PedidoConsultaService {
     private final PedidoMapper mapper;
     private final CoreClient coreClient;
 
+        private PedidoBalcaoResponse toBalcaoResponse(Pedido pedido) {
+                String numero = null;
+
+                try {
+                        numero = coreClient.buscarPedido(pedido.getCorePedidoId()).numero();
+                } catch (RuntimeException exception) {
+                }
+
+                return mapper.toBalcaoResponse(pedido, numero);
+        }
+
     public List<PedidoResponse> listar() {
         return repository.findAllByOrderByDataCriacaoAsc()
                 .stream()
@@ -92,7 +103,7 @@ public class PedidoConsultaService {
                         )
                 )
                 .stream()
-                .map(mapper::toBalcaoResponse)
+                .map(this::toBalcaoResponse)
                 .filter(pedido ->
                         pedido.getItens()
                                 .stream()
@@ -110,7 +121,7 @@ public class PedidoConsultaService {
                         List.of(StatusPedido.AGUARDANDO_SEPARACAO)
                 )
                 .stream()
-                .map(mapper::toBalcaoResponse)
+                .map(this::toBalcaoResponse)
                 .toList();
     }
 
@@ -123,7 +134,7 @@ public class PedidoConsultaService {
                 .filter(pedido ->
                         "RETIRADA".equalsIgnoreCase(pedido.getTipoRecebimento())
                 )
-                .map(mapper::toBalcaoResponse)
+                .map(this::toBalcaoResponse)
                 .toList();
     }
 

@@ -83,10 +83,11 @@ public class PedidoMapper {
                 .build();
     }
 
-    public PedidoBalcaoResponse toBalcaoResponse(Pedido pedido) {
+        public PedidoBalcaoResponse toBalcaoResponse(Pedido pedido, String numero) {
 
         return PedidoBalcaoResponse.builder()
                 .id(pedido.getId())
+                                .numero(numero)
                 .clienteNome(pedido.getClienteNome())
                 .status(pedido.getStatus().name())
                 .valorTotal(pedido.getValorTotal())
