@@ -83,6 +83,8 @@ public class SecurityConfig {
                                 "/cardapio/**",
                                 "/pedidos/**"
                         ).permitAll()
+                        .requestMatchers("/eventos/producao")
+                        .hasAnyAuthority("DELIVERY_COZINHA", "DELIVERY_PIZZARIA")
 
                         .anyRequest().permitAll()
                 )

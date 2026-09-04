@@ -11,6 +11,8 @@ server:
   port: 8081
 
 sigin:
+  cors:
+    allowed-origins: http://localhost:5174
   core:
     url: http://localhost:8080
     canal-venda-id: 2
