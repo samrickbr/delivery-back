@@ -5,14 +5,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
+    show-sql: false
 
   flyway:
     enabled: true
 
 sigin:
   cors:
-    allowed-origins: "*"
+    allowed-origins: ${SIGIN_CORS_ALLOWED_ORIGINS}
