@@ -2,6 +2,7 @@ package br.com.inova.sigin.delivery.pedido.service;
 
 import br.com.inova.sigin.delivery.core.client.CoreClient;
 import br.com.inova.sigin.delivery.core.dto.CoreAuthMeResponse;
+import br.com.inova.sigin.delivery.evento.service.EventoProducaoService;
 import br.com.inova.sigin.delivery.pedido.dto.PedidoPendenciaRequest;
 import br.com.inova.sigin.delivery.pedido.dto.PedidoResponse;
 import br.com.inova.sigin.delivery.pedido.dto.SeparacaoItemRequest;
@@ -17,6 +18,8 @@ import br.com.inova.sigin.delivery.pedidoitem.repository.PedidoItemRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 
@@ -30,6 +33,7 @@ public class PedidoOperacaoService {
     private final StatusPedidoService statusService;
     private final PedidoHistoricoService historicoService;
     private final CoreClient coreClient;
+        private final EventoProducaoService eventoProducaoService;
 
     @Transactional
     public PedidoResponse aprovar(
@@ -62,7 +66,35 @@ public class PedidoOperacaoService {
                 "Pedido aprovado."
         );
 
-        return mapper.toResponse(repository.save(pedido));
+        PedidoResponse response = mapper.toResponse(repository.save(pedido));
+
+        var setores = response.getItens()
+                .stream()
+                .filter(item -> item.getSetor() != null)
+                .filter(item -> !"CANCELADO".equalsIgnoreCase(item.getStatusOperacao()))
+                .map(item -> item.getSetor().trim().toUpperCase())
+                .filter(setor ->
+                        "COZINHA".equals(setor)
+                                || "PIZZARIA".equals(setor)
+                )
+                .distinct()
+                .toList();
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        setores.forEach(setor ->
+                                eventoProducaoService.novoPedido(
+                                        response.getId(),
+                                        setor
+                                )
+                        );
+                    }
+                }
+        );
+
+        return response;
     }
 
     @Transactional
