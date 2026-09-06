@@ -33,6 +33,7 @@ public class PedidoItemOperacaoService {
         PedidoItem item = buscarItemDoPedido(pedido, itemId);
 
         validarItemNaoCancelado(item);
+        validarItemDeProducao(item);
 
         if (item.getStatusOperacao() != StatusOperacao.APROVADO) {
             throw new IllegalArgumentException(
@@ -67,6 +68,7 @@ public class PedidoItemOperacaoService {
         PedidoItem item = buscarItemDoPedido(pedido, itemId);
 
         validarItemNaoCancelado(item);
+        validarItemDeProducao(item);
 
         if (item.getStatusOperacao() != StatusOperacao.APROVADO) {
             throw new IllegalArgumentException(
@@ -99,6 +101,7 @@ public class PedidoItemOperacaoService {
         PedidoItem item = buscarItemDoPedido(pedido, itemId);
 
         validarItemNaoCancelado(item);
+        validarItemDeProducao(item);
 
         if (item.getStatusOperacao() != StatusOperacao.EM_PRODUCAO) {
             throw new IllegalArgumentException(
@@ -110,6 +113,7 @@ public class PedidoItemOperacaoService {
 
         boolean todosFinalizados = pedido.getItens()
                 .stream()
+                .filter(this::ehItemProducao)
                 .allMatch(outroItem ->
                         outroItem.getStatusOperacao() == StatusOperacao.FINALIZADO
                                 || outroItem.getStatusOperacao() == StatusOperacao.CANCELADO
@@ -188,7 +192,23 @@ public class PedidoItemOperacaoService {
         }
     }
 
+    private void validarItemDeProducao(PedidoItem item) {
+        if (!ehItemProducao(item)) {
+            throw new IllegalArgumentException(
+                    "Item do Balcão não participa da produção."
+            );
+        }
+    }
+
     private String getSetor(PedidoItem item) {
         return item.getSetor();
+    }
+
+    private boolean ehItemProducao(PedidoItem item) {
+        String setor = item.getSetor();
+
+        return setor != null
+                && ("COZINHA".equalsIgnoreCase(setor)
+                || "PIZZARIA".equalsIgnoreCase(setor));
     }
 }

@@ -55,6 +55,15 @@ public class PedidoOperacaoService {
                         item.setStatusOperacao(StatusOperacao.APROVADO)
                 );
 
+        boolean possuiItensProducao = pedido.getItens()
+                .stream()
+                .filter(item -> item.getStatusOperacao() != StatusOperacao.CANCELADO)
+                .anyMatch(this::ehItemProducao);
+
+        if (!possuiItensProducao) {
+            pedido.setStatus(StatusPedido.FINALIZADO);
+        }
+
         pedido.setStatusAlteradoEm(LocalDateTime.now());
 
         historicoService.registrar(
@@ -84,12 +93,19 @@ public class PedidoOperacaoService {
                 new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        setores.forEach(setor ->
-                                eventoProducaoService.novoPedido(
-                                        pedido,
-                                        setor
-                                )
-                        );
+                        if (possuiItensProducao) {
+                            setores.forEach(setor ->
+                                    eventoProducaoService.novoPedido(
+                                            pedido,
+                                            setor
+                                    )
+                            );
+                        } else {
+                            eventoProducaoService.pedidoPronto(
+                                    pedido,
+                                    null
+                            );
+                        }
                     }
                 }
         );
@@ -195,6 +211,7 @@ public class PedidoOperacaoService {
         boolean todosFinalizados =
                 pedido.getItens()
                         .stream()
+                        .filter(this::ehItemProducao)
                         .allMatch(item ->
                                 item.getStatusOperacao() == StatusOperacao.FINALIZADO
                                         || item.getStatusOperacao() == StatusOperacao.CANCELADO
@@ -350,6 +367,14 @@ public class PedidoOperacaoService {
 
     private String getSetor(PedidoItem item) {
         return item.getSetor();
+    }
+
+    private boolean ehItemProducao(PedidoItem item) {
+        String setor = item.getSetor();
+
+        return setor != null
+                && ("COZINHA".equalsIgnoreCase(setor)
+                || "PIZZARIA".equalsIgnoreCase(setor));
     }
 
     private Long buscarUsuarioId(String authorization) {
