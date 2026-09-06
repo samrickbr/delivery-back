@@ -291,9 +291,14 @@ public class PedidoController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removerItem(
             @PathVariable Long pedidoId,
-            @PathVariable Long itemId
+            @PathVariable Long itemId,
+            @RequestBody CancelamentoRequest request
     ) {
-        service.removerItem(pedidoId, itemId);
+        service.cancelarItemComercial(
+                pedidoId,
+                itemId,
+                request
+        );
     }
     @PostMapping("/{id}/pagamentos")
     public PedidoResponse adicionarPagamento(

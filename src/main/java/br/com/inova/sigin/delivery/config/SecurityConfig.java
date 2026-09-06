@@ -1,5 +1,6 @@
 package br.com.inova.sigin.delivery.config;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -44,7 +45,7 @@ public class SecurityConfig {
                         )
                 )
                 .authorizeHttpRequests(auth -> auth
-
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers(
                                 "/auth/**"
                         ).permitAll()
@@ -84,8 +85,12 @@ public class SecurityConfig {
                                 "/pedidos/**"
                         ).permitAll()
                         .requestMatchers("/eventos/producao")
-                        .hasAnyAuthority("DELIVERY_COZINHA", "DELIVERY_PIZZARIA")
-
+                        .hasAnyAuthority(
+                                "DELIVERY_COZINHA",
+                                "DELIVERY_PIZZARIA",
+                                "DELIVERY_BALCAO",
+                                "DELIVERY_MINIPDV"
+                        )
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(

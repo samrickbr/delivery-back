@@ -1,6 +1,8 @@
 package br.com.inova.sigin.delivery.evento.service;
 
 import br.com.inova.sigin.delivery.evento.entity.EventoProducao;
+import br.com.inova.sigin.delivery.pedido.entity.Pedido;
+import br.com.inova.sigin.delivery.pedidoitem.entity.PedidoItem;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -37,18 +39,59 @@ public class EventoProducaoService {
         return emitter;
     }
 
-    public void novoPedido(Long pedidoId, String setor) {
+    public void novoPedido(Pedido pedido, String setor) {
         EventoProducao evento = new EventoProducao(
                 "NOVO_PEDIDO",
-                pedidoId,
-                setor
+                pedido.getId(),
+                setor,
+                pedido.getCanalVendaId(),
+                pedido.getCanalVenda(),
+                pedido.getStatus().name()
         );
 
+        enviar("novo-pedido", evento);
+    }
+
+    public void novoPedido(Pedido pedido) {
+        novoPedido(pedido, null);
+    }
+
+    public void pedidoPronto(Pedido pedido, String setor) {
+        EventoProducao evento = new EventoProducao(
+                "PEDIDO_PRONTO",
+                pedido.getId(),
+                setor,
+                pedido.getCanalVendaId(),
+                pedido.getCanalVenda(),
+                pedido.getStatus().name()
+        );
+
+        enviar("pedido-pronto", evento);
+    }
+
+    public void pedidoItemFinalizado(
+            Pedido pedido,
+            PedidoItem pedidoItem
+    ) {
+        EventoProducao evento = new EventoProducao(
+                "PEDIDO_ITEM_FINALIZADO",
+                pedido.getId(),
+                pedidoItem.getSetor(),
+                null,
+                null,
+                pedidoItem.getStatusOperacao().name(),
+                pedidoItem.getId()
+        );
+
+        enviar("pedido-item-finalizado", evento);
+    }
+
+    private void enviar(String nome, EventoProducao evento) {
         for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(
                         SseEmitter.event()
-                                .name("novo-pedido")
+                                .name(nome)
                                 .data(evento)
                 );
             } catch (IOException exception) {

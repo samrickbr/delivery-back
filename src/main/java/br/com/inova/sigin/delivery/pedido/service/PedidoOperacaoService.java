@@ -33,7 +33,7 @@ public class PedidoOperacaoService {
     private final StatusPedidoService statusService;
     private final PedidoHistoricoService historicoService;
     private final CoreClient coreClient;
-        private final EventoProducaoService eventoProducaoService;
+    private final EventoProducaoService eventoProducaoService;
 
     @Transactional
     public PedidoResponse aprovar(
@@ -86,7 +86,7 @@ public class PedidoOperacaoService {
                     public void afterCommit() {
                         setores.forEach(setor ->
                                 eventoProducaoService.novoPedido(
-                                        response.getId(),
+                                        pedido,
                                         setor
                                 )
                         );
@@ -178,6 +178,7 @@ public class PedidoOperacaoService {
             String authorization
     ) {
         Pedido pedido = buscarEntidade(id);
+        boolean eraFinalizado = pedido.getStatus() == StatusPedido.FINALIZADO;
 
         Long usuarioId = buscarUsuarioId(authorization);
 
@@ -215,6 +216,21 @@ public class PedidoOperacaoService {
                 "FINALIZADO",
                 "Setor finalizou a produção."
         );
+
+        if (!eraFinalizado
+                && pedido.getStatus() == StatusPedido.FINALIZADO) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            eventoProducaoService.pedidoPronto(
+                                    pedido,
+                                    setor
+                            );
+                        }
+                    }
+            );
+        }
 
         return mapper.toResponse(pedido);
     }

@@ -2,6 +2,7 @@ package br.com.inova.sigin.delivery.pedido.service;
 
 import br.com.inova.sigin.delivery.core.dto.PedidoItemResponse;
 import br.com.inova.sigin.delivery.core.dto.PedidoResponse;
+import br.com.inova.sigin.delivery.evento.service.EventoProducaoService;
 import br.com.inova.sigin.delivery.pedido.entity.Pedido;
 import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
 import br.com.inova.sigin.delivery.pedido.mapper.PedidoMapper;
@@ -11,13 +12,13 @@ import br.com.inova.sigin.delivery.pedidoitem.enums.StatusOperacao;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +26,7 @@ public class PedidoProjecaoService {
 
     private final PedidoRepository pedidoRepository;
     private final PedidoMapper pedidoMapper;
+    private final EventoProducaoService eventoProducaoService;
 
     @Transactional
     public br.com.inova.sigin.delivery.pedido.dto.PedidoResponse projetar(
@@ -64,6 +66,8 @@ public class PedidoProjecaoService {
                 .clienteNome(extrairClienteNome(coreResponse))
                 .clienteWhatsapp(clienteWhatsapp)
                 .tipoRecebimento(coreResponse.tipoRecebimento())
+                .canalVendaId(coreResponse.canalVendaId())
+                .canalVenda(coreResponse.canalVenda())
                 .status(StatusPedido.RECEBIDO)
                 .valorProdutos(coreResponse.valorProdutos())
                 .taxaEntrega(coreResponse.taxaEntrega())
@@ -83,9 +87,20 @@ public class PedidoProjecaoService {
             );
         }
 
-        return pedidoMapper.toResponse(
-                pedidoRepository.save(pedido)
+        Pedido pedidoPersistido = pedidoRepository.save(pedido);
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        eventoProducaoService.novoPedido(
+                                pedidoPersistido
+                        );
+                    }
+                }
         );
+
+        return pedidoMapper.toResponse(pedidoPersistido);
     }
 
     private void sincronizarPedido(
@@ -102,6 +117,8 @@ public class PedidoProjecaoService {
         }
 
         pedido.setTipoRecebimento(coreResponse.tipoRecebimento());
+        pedido.setCanalVendaId(coreResponse.canalVendaId());
+        pedido.setCanalVenda(coreResponse.canalVenda());
         pedido.setValorProdutos(coreResponse.valorProdutos());
         pedido.setTaxaEntrega(coreResponse.taxaEntrega());
         pedido.setValorTotal(coreResponse.valorTotal());
@@ -120,30 +137,28 @@ public class PedidoProjecaoService {
         }
 
         Map<Long, PedidoItem> itensPorCoreId = new HashMap<>();
-        Map<Long, java.util.List<PedidoItem>> itensLegadosPorProduto =
-                new HashMap<>();
 
         for (PedidoItem item : pedido.getItens()) {
 
-            if (item.getCoreItemId() != null) {
-                itensPorCoreId.put(
-                        item.getCoreItemId(),
-                        item
+            if (item.getCoreItemId() == null) {
+                throw new IllegalStateException(
+                        "Item local sem referência ao item correspondente "
+                                + "no SIGIN Core."
                 );
-                continue;
             }
 
-            if (item.getCoreProdutoId() != null) {
-                itensLegadosPorProduto
-                        .computeIfAbsent(
-                                item.getCoreProdutoId(),
-                                key -> new java.util.ArrayList<>()
-                        )
-                        .add(item);
+            PedidoItem itemComMesmoCoreId = itensPorCoreId.put(
+                    item.getCoreItemId(),
+                    item
+            );
+
+            if (itemComMesmoCoreId != null) {
+                throw new IllegalStateException(
+                        "Existem itens locais com a mesma referência "
+                                + "ao item do SIGIN Core."
+                );
             }
         }
-
-        Set<Long> idsRecebidosDoCore = new HashSet<>();
 
         for (PedidoItemResponse coreItem : coreResponse.itens()) {
 
@@ -155,60 +170,13 @@ public class PedidoProjecaoService {
 
             PedidoItem item = itensPorCoreId.get(coreItem.id());
 
-            /*
-             * Compatibilidade com registros legados.
-             *
-             * O casamento por produto só é utilizado para itens antigos
-             * que ainda não possuem coreItemId.
-             *
-             * Depois da vinculação, coreItemId passa a ser a identidade
-             * definitiva do item.
-             */
-            if (item == null && coreItem.produtoId() != null) {
-
-                java.util.List<PedidoItem> candidatos =
-                        itensLegadosPorProduto.get(coreItem.produtoId());
-
-                if (candidatos != null && !candidatos.isEmpty()) {
-
-                    item = candidatos.remove(0);
-
-                    item.setCoreItemId(coreItem.id());
-
-                    itensPorCoreId.put(
-                            coreItem.id(),
-                            item
-                    );
-
-                    if (candidatos.isEmpty()) {
-                        itensLegadosPorProduto.remove(
-                                coreItem.produtoId()
-                        );
-                    }
-                }
-            }
-
             if (item != null) {
                 atualizarDadosComerciais(item, coreItem);
             } else {
                 item = projetarItem(coreItem, pedido);
                 pedido.getItens().add(item);
             }
-
-            idsRecebidosDoCore.add(coreItem.id());
         }
-
-        /*
-         * Remove somente itens que já possuem identidade no Core
-         * e deixaram de existir na resposta atual.
-         *
-         * Registros legados ainda não vinculados permanecem intactos
-         * para permitir a reconciliação.
-         */
-        pedido.getItens().removeIf(item ->
-                item.getCoreItemId() != null
-                        && !idsRecebidosDoCore.contains(item.getCoreItemId())
-        );
     }
 
     private void atualizarDadosComerciais(
@@ -231,8 +199,7 @@ public class PedidoProjecaoService {
         item.setValorTotal(coreItem.valorTotal());
         item.setSetor(coreItem.setor());
 
-        if (Boolean.FALSE.equals(coreItem.ativo())
-                && item.getStatusOperacao() == StatusOperacao.PENDENTE) {
+        if (Boolean.FALSE.equals(coreItem.ativo())) {
             item.setStatusOperacao(StatusOperacao.CANCELADO);
         }
 

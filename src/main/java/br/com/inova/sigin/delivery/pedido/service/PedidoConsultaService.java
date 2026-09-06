@@ -104,14 +104,6 @@ public class PedidoConsultaService {
                 )
                 .stream()
                 .map(this::toBalcaoResponse)
-                .filter(pedido ->
-                        pedido.getItens()
-                                .stream()
-                                .anyMatch(item ->
-                                        "BALCAO".equalsIgnoreCase(item.getSetor())
-                                                && !"CANCELADO".equalsIgnoreCase(item.getStatusOperacao())
-                                )
-                )
                 .toList();
     }
 

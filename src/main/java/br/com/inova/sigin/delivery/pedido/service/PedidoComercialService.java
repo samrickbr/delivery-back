@@ -40,16 +40,51 @@ public class PedidoComercialService {
     ) {
         Pedido pedido = buscarEntidade(pedidoId);
 
-        if (request.getProdutoId() == null) {
-            throw new IllegalArgumentException(
-                    "Produto é obrigatório."
-            );
-        }
-
         if (request.getQuantidade() == null
                 || request.getQuantidade() <= 0) {
             throw new IllegalArgumentException(
                     "Quantidade deve ser maior que zero."
+            );
+        }
+
+        if (request.getItemId() != null) {
+            PedidoItem item = buscarItemDoPedido(
+                    pedido,
+                    request.getItemId()
+            );
+
+            validarItemEditavel(item);
+
+            if (item.getQuantidade() == null) {
+                throw new IllegalStateException(
+                        "Item sem quantidade definida."
+                );
+            }
+
+            try {
+                request.setQuantidade(
+                        Math.addExact(
+                                item.getQuantidade(),
+                                request.getQuantidade()
+                        )
+                );
+            } catch (ArithmeticException exception) {
+                throw new IllegalArgumentException(
+                        "Quantidade excede o limite permitido.",
+                        exception
+                );
+            }
+
+            return alterarQuantidadeItem(
+                    pedidoId,
+                    item.getId(),
+                    request
+            );
+        }
+
+        if (request.getProdutoId() == null) {
+            throw new IllegalArgumentException(
+                    "Produto é obrigatório."
             );
         }
 

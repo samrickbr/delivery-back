@@ -189,6 +189,18 @@ public class PedidoService {
         );
     }
 
+    public PedidoResponse cancelarItemComercial(
+            Long pedidoId,
+            Long itemId,
+            CancelamentoRequest request
+    ) {
+        return cancelamentoService.cancelarItemComercial(
+                pedidoId,
+                itemId,
+                request
+        );
+    }
+
     public PedidoResponse cancelarItens(
             Long id,
             String setor,

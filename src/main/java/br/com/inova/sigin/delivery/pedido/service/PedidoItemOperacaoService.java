@@ -1,5 +1,6 @@
 package br.com.inova.sigin.delivery.pedido.service;
 
+import br.com.inova.sigin.delivery.evento.service.EventoProducaoService;
 import br.com.inova.sigin.delivery.pedido.dto.PedidoPendenciaRequest;
 import br.com.inova.sigin.delivery.pedido.dto.PedidoResponse;
 import br.com.inova.sigin.delivery.pedido.entity.Pedido;
@@ -12,6 +13,8 @@ import br.com.inova.sigin.delivery.pedidoitem.enums.StatusOperacao;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 
@@ -22,6 +25,7 @@ public class PedidoItemOperacaoService {
     private final PedidoRepository repository;
     private final PedidoMapper mapper;
     private final PedidoHistoricoService historicoService;
+    private final EventoProducaoService eventoProducaoService;
 
     @Transactional
     public PedidoResponse iniciarProducaoItem(Long pedidoId, Long itemId) {
@@ -91,6 +95,7 @@ public class PedidoItemOperacaoService {
     @Transactional
     public PedidoResponse finalizarItem(Long pedidoId, Long itemId) {
         Pedido pedido = buscarEntidade(pedidoId);
+        boolean eraFinalizado = pedido.getStatus() == StatusPedido.FINALIZADO;
         PedidoItem item = buscarItemDoPedido(pedido, itemId);
 
         validarItemNaoCancelado(item);
@@ -124,6 +129,28 @@ public class PedidoItemOperacaoService {
                 getSetor(item),
                 "FINALIZADO",
                 "Item finalizou a produção."
+        );
+
+        boolean pedidoFoiFinalizado = !eraFinalizado
+                && pedido.getStatus() == StatusPedido.FINALIZADO;
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        eventoProducaoService.pedidoItemFinalizado(
+                                pedido,
+                                item
+                        );
+
+                        if (pedidoFoiFinalizado) {
+                            eventoProducaoService.pedidoPronto(
+                                    pedido,
+                                    getSetor(item)
+                            );
+                        }
+                    }
+                }
         );
 
         return mapper.toResponse(pedido);

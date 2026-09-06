@@ -1,5 +1,6 @@
 package br.com.inova.sigin.delivery.pedido.service;
 
+import br.com.inova.sigin.delivery.core.client.CoreClient;
 import br.com.inova.sigin.delivery.pedido.dto.CancelamentoItensRequest;
 import br.com.inova.sigin.delivery.pedido.dto.CancelamentoRequest;
 import br.com.inova.sigin.delivery.pedido.dto.PedidoResponse;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,28 +25,38 @@ public class PedidoCancelamentoService {
     private final PedidoRepository repository;
     private final PedidoMapper mapper;
     private final PedidoHistoricoService historicoService;
+    private final CoreClient coreClient;
+    private final PedidoProjecaoService pedidoProjecaoService;
 
     @Transactional
     public PedidoResponse cancelar(Long id, String setor, CancelamentoRequest request) {
         Pedido pedido = buscarEntidade(id);
-
-        pedido.getItens()
+        String justificativa = validarJustificativa(request.getJustificativa());
+        List<PedidoItem> itensParaCancelar = pedido.getItens()
                 .stream()
                 .filter(item -> getSetor(item).equals(setor))
-                .forEach(item -> item.setStatusOperacao(StatusOperacao.CANCELADO));
+                .filter(item -> item.getStatusOperacao() != StatusOperacao.CANCELADO)
+                .toList();
+
+        itensParaCancelar.forEach(item ->
+                cancelarItemLocal(item, justificativa)
+        );
 
         boolean todosCancelados = pedido.getItens()
                 .stream()
-                .allMatch(item -> item.getStatusOperacao() == StatusOperacao.CANCELADO);
+                .allMatch(item ->
+                        item.getStatusOperacao() == StatusOperacao.CANCELADO
+                );
 
         if (todosCancelados) {
             pedido.setStatus(StatusPedido.CANCELADO);
         }
 
-        pedido.setObservacaoOperacao(request.getJustificativa());
+        pedido.setObservacaoOperacao(justificativa);
         pedido.setStatusAlteradoEm(LocalDateTime.now());
 
-        repository.save(pedido);
+        removerItensNoCore(pedido, itensParaCancelar);
+        PedidoResponse response = sincronizar(pedido);
 
         historicoService.registrar(
                 pedido,
@@ -52,52 +64,77 @@ public class PedidoCancelamentoService {
                 "Sistema",
                 setor,
                 "SETOR_CANCELADO",
-                "Todos os itens do setor foram cancelados. Motivo: " + request.getJustificativa()
+                "Todos os itens do setor foram cancelados. Motivo: " + justificativa
         );
 
-        return mapper.toResponse(pedido);
+        return response;
     }
 
     @Transactional
     public PedidoResponse cancelarPedido(Long id, CancelamentoRequest request) {
-        Pedido pedido = buscarEntidade(id);
+        return cancelarPedidoCompleto(id, request.getJustificativa());
+    }
 
-        pedido.setStatus(StatusPedido.CANCELADO);
+    @Transactional
+    public PedidoResponse cancelarItemComercial(
+            Long pedidoId,
+            Long itemId,
+            CancelamentoRequest request
+    ) {
+        Pedido pedido = buscarEntidade(pedidoId);
+        PedidoItem item = buscarItemDoPedido(pedido, itemId);
+        String justificativa = validarJustificativa(request.getJustificativa());
+
+        if (item.getStatusOperacao() == StatusOperacao.CANCELADO) {
+            throw new IllegalArgumentException(
+                    "Item já está cancelado."
+            );
+        }
+
+        cancelarItemLocal(item, justificativa);
         pedido.setStatusAlteradoEm(LocalDateTime.now());
+        removerItensNoCore(pedido, List.of(item));
+
+        PedidoResponse response = sincronizar(pedido);
 
         historicoService.registrar(
                 pedido,
                 null,
                 "Sistema",
-                "BALCAO",
-                "PEDIDO_CANCELADO",
-                request.getJustificativa()
+                getSetor(item),
+                "ITEM_CANCELADO",
+                item.getQuantidade() + "x " + item.getProdutoNome()
+                        + " - Motivo: " + justificativa
         );
 
-        return mapper.toResponse(repository.save(pedido));
+        return response;
     }
 
     @Transactional
     public PedidoResponse cancelarItens(Long id, String setor, CancelamentoItensRequest request) {
         Pedido pedido = buscarEntidade(id);
+        String justificativa = validarJustificativa(request.getJustificativa());
+        List<PedidoItem> itensSelecionados = request.getItens()
+                .stream()
+                .distinct()
+                .map(itemId -> buscarItemDoPedido(pedido, itemId))
+                .toList();
 
-        for (Long itemId : request.getItens()) {
-            PedidoItem item = pedido.getItens()
-                    .stream()
-                    .filter(i -> i.getId().equals(itemId))
-                    .findFirst()
-                    .orElseThrow();
+        for (PedidoItem item : itensSelecionados) {
 
             String setorItem = getSetor(item);
 
             if (!setorItem.equals(setor) && !setor.equals("BALCAO")) {
-                throw new RuntimeException("Usuário não pode cancelar este item.");
+                throw new IllegalArgumentException(
+                        "Usuário não pode cancelar este item."
+                );
             }
 
-            item.setStatusOperacao(StatusOperacao.CANCELADO);
-            item.setMotivoCancelamento(request.getJustificativa());
-            item.setCanceladoEm(LocalDateTime.now());
-            item.setCanceladoPor("Sistema");
+            if (item.getStatusOperacao() == StatusOperacao.CANCELADO) {
+                continue;
+            }
+
+            cancelarItemLocal(item, justificativa);
 
             historicoService.registrar(
                     pedido,
@@ -105,29 +142,44 @@ public class PedidoCancelamentoService {
                     "Sistema",
                     setor,
                     "ITEM_CANCELADO",
-                    item.getQuantidade() + "x " + item.getProdutoNome() + " - Motivo: " + request.getJustificativa()
+                    item.getQuantidade() + "x " + item.getProdutoNome() + " - Motivo: " + justificativa
             );
         }
 
-        pedido.setStatusAlteradoEm(LocalDateTime.now());
-        repository.save(pedido);
+        List<PedidoItem> itensParaCancelar = itensSelecionados
+                .stream()
+                .filter(item ->
+                        item.getStatusOperacao() != StatusOperacao.CANCELADO
+                )
+                .toList();
 
-        return mapper.toResponse(pedido);
+        itensParaCancelar.forEach(item ->
+                cancelarItemLocal(item, justificativa)
+        );
+
+        pedido.setStatusAlteradoEm(LocalDateTime.now());
+        removerItensNoCore(pedido, itensParaCancelar);
+
+        return sincronizar(pedido);
     }
 
     @Transactional
     public PedidoResponse cancelarPedidoCompleto(Long id, String justificativa) {
         Pedido pedido = buscarEntidade(id);
+        String motivo = validarJustificativa(justificativa);
+        List<PedidoItem> itensParaCancelar = pedido.getItens()
+                .stream()
+                .filter(item -> item.getStatusOperacao() != StatusOperacao.CANCELADO)
+                .toList();
 
-        pedido.getItens().forEach(item -> {
-            item.setStatusOperacao(StatusOperacao.CANCELADO);
-            item.setMotivoCancelamento(justificativa);
-            item.setCanceladoEm(LocalDateTime.now());
-            item.setCanceladoPor("Sistema");
-        });
+        itensParaCancelar.forEach(item ->
+                cancelarItemLocal(item, motivo)
+        );
 
         pedido.setStatus(StatusPedido.CANCELADO);
         pedido.setStatusAlteradoEm(LocalDateTime.now());
+        removerItensNoCore(pedido, itensParaCancelar);
+        PedidoResponse response = sincronizar(pedido);
 
         historicoService.registrar(
                 pedido,
@@ -135,10 +187,73 @@ public class PedidoCancelamentoService {
                 "Sistema",
                 "BALCAO",
                 "PEDIDO_CANCELADO",
-                justificativa
+                motivo
         );
 
-        return mapper.toResponse(repository.save(pedido));
+        return response;
+    }
+
+    private void removerItensNoCore(
+            Pedido pedido,
+            List<PedidoItem> itens
+    ) {
+        itens.stream()
+                .forEach(item -> coreClient.removerItem(
+                        pedido.getCorePedidoId(),
+                        obterCoreItemId(item)
+                ));
+    }
+
+    private PedidoItem buscarItemDoPedido(
+            Pedido pedido,
+            Long itemId
+    ) {
+        return pedido.getItens()
+                .stream()
+                .filter(item -> item.getId().equals(itemId))
+                .findFirst()
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Item não pertence ao pedido informado."
+                        )
+                );
+    }
+
+    private PedidoResponse sincronizar(Pedido pedido) {
+        return pedidoProjecaoService.projetar(
+                coreClient.buscarPedido(pedido.getCorePedidoId()),
+                pedido.getClienteWhatsapp()
+        );
+    }
+
+    private void cancelarItemLocal(
+            PedidoItem item,
+            String justificativa
+    ) {
+        item.setStatusOperacao(StatusOperacao.CANCELADO);
+        item.setMotivoCancelamento(justificativa);
+        item.setCanceladoEm(LocalDateTime.now());
+        item.setCanceladoPor("Sistema");
+    }
+
+    private Long obterCoreItemId(PedidoItem item) {
+        if (item.getCoreItemId() == null) {
+            throw new IllegalStateException(
+                    "Item sem referência ao item correspondente no SIGIN Core."
+            );
+        }
+
+        return item.getCoreItemId();
+    }
+
+    private String validarJustificativa(String justificativa) {
+        if (justificativa == null || justificativa.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Motivo do cancelamento é obrigatório."
+            );
+        }
+
+        return justificativa.trim();
     }
 
     private Pedido buscarEntidade(Long id) {

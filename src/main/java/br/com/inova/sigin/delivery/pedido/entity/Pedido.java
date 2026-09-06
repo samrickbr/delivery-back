@@ -5,6 +5,8 @@ import br.com.inova.sigin.delivery.pedidohistorico.entity.PedidoHistorico;
 import br.com.inova.sigin.delivery.pedidoitem.entity.PedidoItem;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -49,6 +51,12 @@ public class Pedido {
     private String clienteWhatsapp;
 
     private String tipoRecebimento;
+
+    private Long canalVendaId;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private Object canalVenda;
 
     @Enumerated(EnumType.STRING)
     private StatusPedido status;
