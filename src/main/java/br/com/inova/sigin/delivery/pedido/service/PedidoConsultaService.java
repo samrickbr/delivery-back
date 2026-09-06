@@ -98,6 +98,9 @@ public class PedidoConsultaService {
                 .findByStatusInOrderByDataCriacaoAsc(
                         List.of(
                                 StatusPedido.RECEBIDO,
+                                StatusPedido.APROVADO,
+                                StatusPedido.PENDENTE,
+                                StatusPedido.EM_PRODUCAO,
                                 StatusPedido.FINALIZADO,
                                 StatusPedido.AGUARDANDO_SEPARACAO
                         )

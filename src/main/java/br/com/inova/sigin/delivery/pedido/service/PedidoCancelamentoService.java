@@ -130,20 +130,6 @@ public class PedidoCancelamentoService {
                 );
             }
 
-            if (item.getStatusOperacao() == StatusOperacao.CANCELADO) {
-                continue;
-            }
-
-            cancelarItemLocal(item, justificativa);
-
-            historicoService.registrar(
-                    pedido,
-                    null,
-                    "Sistema",
-                    setor,
-                    "ITEM_CANCELADO",
-                    item.getQuantidade() + "x " + item.getProdutoNome() + " - Motivo: " + justificativa
-            );
         }
 
         List<PedidoItem> itensParaCancelar = itensSelecionados
@@ -155,6 +141,18 @@ public class PedidoCancelamentoService {
 
         itensParaCancelar.forEach(item ->
                 cancelarItemLocal(item, justificativa)
+        );
+
+        itensParaCancelar.forEach(item ->
+                historicoService.registrar(
+                        pedido,
+                        null,
+                        "Sistema",
+                        setor,
+                        "ITEM_CANCELADO",
+                        item.getQuantidade() + "x " + item.getProdutoNome()
+                                + " - Motivo: " + justificativa
+                )
         );
 
         pedido.setStatusAlteradoEm(LocalDateTime.now());
