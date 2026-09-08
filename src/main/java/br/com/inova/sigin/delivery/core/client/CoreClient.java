@@ -755,15 +755,45 @@ public class CoreClient {
                     .headers(headers -> headers.setBearerAuth(autenticar()))
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        String corpo = "";
+
+                        try {
+                            if (response.getBody() != null) {
+                                corpo = new String(
+                                        response.getBody().readAllBytes(),
+                                        java.nio.charset.StandardCharsets.UTF_8
+                                );
+                            }
+                        } catch (Exception ignored) {
+                        }
+
                         throw new CoreIntegrationException(
-                                "SIGIN Core rejeitou a remoção do item. HTTP "
-                                        + response.getStatusCode().value()
+                                extrairMensagemErro(
+                                        corpo,
+                                        "SIGIN Core rejeitou a remoção do item. HTTP "
+                                                + response.getStatusCode().value()
+                                )
                         );
                     })
                     .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        String corpo = "";
+
+                        try {
+                            if (response.getBody() != null) {
+                                corpo = new String(
+                                        response.getBody().readAllBytes(),
+                                        java.nio.charset.StandardCharsets.UTF_8
+                                );
+                            }
+                        } catch (Exception ignored) {
+                        }
+
                         throw new CoreIntegrationException(
-                                "SIGIN Core apresentou erro interno ao remover o item. HTTP "
-                                        + response.getStatusCode().value()
+                                extrairMensagemErro(
+                                        corpo,
+                                        "SIGIN Core apresentou erro interno ao remover o item. HTTP "
+                                                + response.getStatusCode().value()
+                                )
                         );
                     })
                     .toBodilessEntity();
@@ -812,6 +842,29 @@ public class CoreClient {
         }
     }
 
+    public PedidoResponse alterarPagamento(
+            Long pedidoId,
+            Long pagamentoId,
+            PedidoPagamentoRequest request
+    ) {
+        try {
+            return restClient.put()
+                    .uri(
+                            "/pedidos/{pedidoId}/pagamentos/{pagamentoId}",
+                            pedidoId,
+                            pagamentoId
+                    )
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .body(request)
+                    .retrieve()
+                    .body(PedidoResponse.class);
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível alterar o pagamento no SIGIN Core.",
+                    exception
+            );
+        }
+    }
     public PedidoResponse faturarPedido(Long pedidoId) {
         try {
             return restClient.post()
@@ -1412,6 +1465,43 @@ public class CoreClient {
                     500,
                     "Erro de comunicação com o Core ao listar endereços do cliente.",
                     e
+            );
+        }
+    }
+
+    public void cancelarPedido(Long pedidoId, String justificativa) {
+        try {
+            restClient.patch()
+                    .uri("/pedidos/{id}/cancelar", pedidoId)
+                    .headers(headers -> headers.setBearerAuth(autenticar()))
+                    .body(Map.of("justificativa", justificativa))
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::is4xxClientError,
+                            (request, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core rejeitou o cancelamento do pedido. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .onStatus(
+                            HttpStatusCode::is5xxServerError,
+                            (request, response) -> {
+                                throw new CoreIntegrationException(
+                                        "SIGIN Core apresentou erro interno ao cancelar o pedido. HTTP "
+                                                + response.getStatusCode().value()
+                                );
+                            }
+                    )
+                    .toBodilessEntity();
+
+        } catch (CoreIntegrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new CoreIntegrationException(
+                    "Não foi possível cancelar o pedido no SIGIN Core.",
+                    exception
             );
         }
     }

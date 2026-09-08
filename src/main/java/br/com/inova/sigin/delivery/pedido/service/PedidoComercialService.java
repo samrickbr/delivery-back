@@ -179,6 +179,29 @@ public class PedidoComercialService {
     }
 
     @Transactional
+    public PedidoResponse alterarPagamento(
+            Long pedidoId,
+            Long pagamentoId,
+            PedidoPagamentoRequest request
+    ) {
+        Pedido pedido = buscarEntidade(pedidoId);
+
+        br.com.inova.sigin.delivery.core.dto.PedidoPagamentoRequest coreRequest =
+                new br.com.inova.sigin.delivery.core.dto.PedidoPagamentoRequest(
+                        request.getFormaPagamentoId(),
+                        request.getValor()
+                );
+
+        br.com.inova.sigin.delivery.core.dto.PedidoResponse coreResponse =
+                coreClient.alterarPagamento(
+                        pedido.getCorePedidoId(),
+                        pagamentoId,
+                        coreRequest
+                );
+
+        return sincronizar(pedido, coreResponse);
+    }
+    @Transactional
     public PedidoResponse faturar(Long pedidoId) {
         Pedido pedido = buscarEntidade(pedidoId);
 

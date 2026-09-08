@@ -79,6 +79,10 @@ public class SecurityConfig {
                         ).hasAuthority("DELIVERY_BALCAO")
 
                         .requestMatchers(
+                                "/admin/pedido-itens/reparar-core"
+                        ).hasAuthority("PEDIDO_ITEM_REPARAR_CORE")
+
+                        .requestMatchers(
                                 "/produtos/**",
                                 "/categorias/**",
                                 "/cardapio/**",

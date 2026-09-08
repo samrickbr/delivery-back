@@ -15,4 +15,5 @@ public interface PedidoItemRepository
             String setor,
             List<StatusOperacao> status
     );
+    List<PedidoItem> findByCoreItemIdIsNull();
 }
