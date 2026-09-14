@@ -28,16 +28,19 @@ public class PedidoConsultaService {
     private final PedidoMapper mapper;
     private final CoreClient coreClient;
 
-        private PedidoBalcaoResponse toBalcaoResponse(Pedido pedido) {
-                String numero = null;
+    private PedidoBalcaoResponse toBalcaoResponse(Pedido pedido) {
+        String numero = null;
 
-                try {
-                        numero = coreClient.buscarPedido(pedido.getCorePedidoId()).numero();
-                } catch (RuntimeException exception) {
-                }
-
-                return mapper.toBalcaoResponse(pedido, numero);
+        try {
+            numero = coreClient.buscarPedido(
+                    pedido.getCorePedidoId()
+            ).numero();
+        } catch (RuntimeException exception) {
+            // mantém fallback para não quebrar a separação
         }
+
+        return mapper.toBalcaoResponse(pedido, numero);
+    }
 
     public List<PedidoResponse> listar() {
         return repository.findAllByOrderByDataCriacaoAsc()
@@ -365,6 +368,13 @@ public class PedidoConsultaService {
     public PedidoSituacaoFinanceiraResponse consultarSituacaoFinanceira(
             Long pedidoId
     ) {
-        return coreClient.consultarSituacaoFinanceira(pedidoId);
+        Pedido pedido = repository.findById(pedidoId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Pedido não encontrado.")
+                );
+
+        return coreClient.consultarSituacaoFinanceira(
+                pedido.getCorePedidoId()
+        );
     }
 }

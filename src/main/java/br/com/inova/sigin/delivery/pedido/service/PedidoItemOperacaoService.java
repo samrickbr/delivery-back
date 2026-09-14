@@ -17,6 +17,8 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -160,6 +162,79 @@ public class PedidoItemOperacaoService {
         return mapper.toResponse(pedido);
     }
 
+    /**
+     * Valida se os itens do pedido estão aptos para a finalização da venda.
+     * <p>
+     * Regras:
+     * - Itens BALCAO não exigem produção e podem ser concluídos automaticamente.
+     * - Itens COZINHA/PIZZARIA somente podem prosseguir se estiverem
+     * FINALIZADOS ou CANCELADOS.
+     * - Nenhum item de produção é finalizado artificialmente.
+     */
+    @Transactional
+    public void validarEConcluirParaFaturamento(Pedido pedido) {
+        List<String> bloqueios = new ArrayList<>();
+        boolean alterou = false;
+
+        for (PedidoItem item : pedido.getItens()) {
+            StatusOperacao status = item.getStatusOperacao();
+
+            if (status == null) {
+                bloqueios.add(
+                        formatarBloqueio(
+                                item,
+                                "sem status operacional definido"
+                        )
+                );
+                continue;
+            }
+
+            if (status == StatusOperacao.CANCELADO
+                    || status == StatusOperacao.FINALIZADO) {
+                continue;
+            }
+
+            if (ehItemProducao(item)) {
+                bloqueios.add(
+                        formatarBloqueio(
+                                item,
+                                "aguarda conclusão da produção"
+                        )
+                );
+                continue;
+            }
+
+            /*
+             * Item que não exige produção, especialmente BALCAO.
+             *
+             * A venda pode ser finalizada sem passar por produção.
+             */
+            item.setStatusOperacao(StatusOperacao.FINALIZADO);
+            alterou = true;
+
+            historicoService.registrar(
+                    pedido,
+                    null,
+                    "Sistema",
+                    getSetor(item),
+                    "FINALIZADO",
+                    "Item concluído automaticamente no fechamento da venda."
+            );
+        }
+
+        if (!bloqueios.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Venda não pode ser finalizada. "
+                            + String.join("; ", bloqueios)
+            );
+        }
+
+        if (alterou) {
+            pedido.setStatusAlteradoEm(LocalDateTime.now());
+            repository.save(pedido);
+        }
+    }
+
     private Pedido buscarEntidade(Long id) {
         return repository.findById(id)
                 .orElseThrow(() ->
@@ -210,5 +285,31 @@ public class PedidoItemOperacaoService {
         return setor != null
                 && ("COZINHA".equalsIgnoreCase(setor)
                 || "PIZZARIA".equalsIgnoreCase(setor));
+    }
+
+    private String formatarBloqueio(
+            PedidoItem item,
+            String motivo
+    ) {
+        String produto = item.getProdutoNome();
+
+        if (produto == null || produto.isBlank()) {
+            produto = "Item #" + item.getId();
+        }
+
+        String setor = getSetor(item);
+        String status = item.getStatusOperacao() == null
+                ? "SEM_STATUS"
+                : item.getStatusOperacao().name();
+
+        return produto
+                + " ["
+                + (setor == null ? "SEM_SETOR" : setor)
+                + "]"
+                + " - status "
+                + status
+                + ": "
+                + motivo
+                + ".";
     }
 }

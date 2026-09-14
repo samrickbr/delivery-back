@@ -865,28 +865,72 @@ public class CoreClient {
             );
         }
     }
+
     public PedidoResponse faturarPedido(Long pedidoId) {
         try {
             return restClient.post()
                     .uri("/pedidos/{id}/faturar", pedidoId)
                     .headers(headers -> headers.setBearerAuth(autenticar()))
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                        throw new CoreIntegrationException(
-                                "SIGIN Core rejeitou o faturamento do pedido. HTTP "
-                                        + response.getStatusCode().value()
-                        );
-                    })
-                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                        throw new CoreIntegrationException(
-                                "SIGIN Core apresentou erro interno ao faturar o pedido. HTTP "
-                                        + response.getStatusCode().value()
-                        );
-                    })
+                    .onStatus(
+                            HttpStatusCode::is4xxClientError,
+                            (request, response) -> {
+
+                                String corpo = "";
+
+                                try {
+                                    if (response.getBody() != null) {
+                                        corpo = new String(
+                                                response.getBody().readAllBytes(),
+                                                java.nio.charset.StandardCharsets.UTF_8
+                                        );
+                                    }
+                                } catch (Exception ignored) {
+                                }
+
+                                throw new CoreIntegrationException(
+                                        response.getStatusCode().value(),
+                                        extrairMensagemErro(
+                                                corpo,
+                                                "SIGIN Core rejeitou o faturamento do pedido. HTTP "
+                                                        + response.getStatusCode().value()
+                                        ),
+                                        corpo
+                                );
+                            }
+                    )
+                    .onStatus(
+                            HttpStatusCode::is5xxServerError,
+                            (request, response) -> {
+
+                                String corpo = "";
+
+                                try {
+                                    if (response.getBody() != null) {
+                                        corpo = new String(
+                                                response.getBody().readAllBytes(),
+                                                java.nio.charset.StandardCharsets.UTF_8
+                                        );
+                                    }
+                                } catch (Exception ignored) {
+                                }
+
+                                throw new CoreIntegrationException(
+                                        response.getStatusCode().value(),
+                                        extrairMensagemErro(
+                                                corpo,
+                                                "SIGIN Core apresentou erro interno ao faturar o pedido. HTTP "
+                                                        + response.getStatusCode().value()
+                                        ),
+                                        corpo
+                                );
+                            }
+                    )
                     .body(PedidoResponse.class);
 
         } catch (CoreIntegrationException exception) {
             throw exception;
+
         } catch (Exception exception) {
             throw new CoreIntegrationException(
                     "Não foi possível faturar o pedido no SIGIN Core.",
@@ -894,6 +938,7 @@ public class CoreClient {
             );
         }
     }
+
     private String autenticar() {
         try {
             CoreLoginRequest request = new CoreLoginRequest(

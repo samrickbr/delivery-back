@@ -5,12 +5,19 @@ import br.com.inova.sigin.delivery.pedido.dto.PedidoItemRequest;
 import br.com.inova.sigin.delivery.pedido.dto.PedidoPagamentoRequest;
 import br.com.inova.sigin.delivery.pedido.dto.PedidoResponse;
 import br.com.inova.sigin.delivery.pedido.entity.Pedido;
+import br.com.inova.sigin.delivery.pedido.exception.ProducoesPendentesException;
 import br.com.inova.sigin.delivery.pedido.mapper.PedidoMapper;
 import br.com.inova.sigin.delivery.pedido.repository.PedidoRepository;
 import br.com.inova.sigin.delivery.pedidoitem.entity.PedidoItem;
+import br.com.inova.sigin.delivery.pedidoitem.enums.StatusOperacao;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -201,9 +208,13 @@ public class PedidoComercialService {
 
         return sincronizar(pedido, coreResponse);
     }
+
     @Transactional
     public PedidoResponse faturar(Long pedidoId) {
         Pedido pedido = buscarEntidade(pedidoId);
+
+        concluirItensDeBalcao(pedido);
+        validarItensParaFaturamento(pedido);
 
         br.com.inova.sigin.delivery.core.dto.PedidoResponse coreResponse =
                 coreClient.faturarPedido(
@@ -211,6 +222,76 @@ public class PedidoComercialService {
                 );
 
         return sincronizar(pedido, coreResponse);
+    }
+
+    private void concluirItensDeBalcao(Pedido pedido) {
+        boolean alterou = false;
+
+        for (PedidoItem item : pedido.getItens()) {
+            if (item == null) {
+                continue;
+            }
+
+            String setor = normalizar(item.getSetor());
+
+            if (!"BALCAO".equals(setor)) {
+                continue;
+            }
+
+            if (item.getStatusOperacao() == null) {
+                throw new IllegalArgumentException(
+                        "Item do Balcão sem status operacional."
+                );
+            }
+
+            if (item.getStatusOperacao() != StatusOperacao.CANCELADO
+                    && item.getStatusOperacao() != StatusOperacao.FINALIZADO) {
+
+                item.setStatusOperacao(StatusOperacao.FINALIZADO);
+                alterou = true;
+            }
+        }
+
+        if (alterou) {
+            pedido.setStatusAlteradoEm(LocalDateTime.now());
+            repository.save(pedido);
+        }
+    }
+
+    private void validarItensParaFaturamento(Pedido pedido) {
+        List<PedidoItem> bloqueados = new ArrayList<>();
+
+        for (PedidoItem item : pedido.getItens()) {
+            if (item == null) {
+                continue;
+            }
+
+            String setor = normalizar(item.getSetor());
+            StatusOperacao status = item.getStatusOperacao();
+
+            if (status == null) {
+                bloqueados.add(item);
+                continue;
+            }
+
+            if ("BALCAO".equals(setor)) {
+                continue;
+            }
+
+            if ("COZINHA".equals(setor)
+                    || "PIZZARIA".equals(setor)) {
+
+                if (status != StatusOperacao.FINALIZADO
+                        && status != StatusOperacao.CANCELADO) {
+
+                    bloqueados.add(item);
+                }
+            }
+        }
+
+        if (!bloqueados.isEmpty()) {
+            throw new ProducoesPendentesException(bloqueados);
+        }
     }
 
     private PedidoResponse sincronizar(
@@ -279,5 +360,15 @@ public class PedidoComercialService {
         }
 
         return item.getCoreItemId();
+    }
+
+    private String normalizar(String valor) {
+        if (valor == null) {
+            return "";
+        }
+
+        return valor
+                .trim()
+                .toUpperCase(Locale.ROOT);
     }
 }
