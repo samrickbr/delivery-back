@@ -221,6 +221,10 @@ public class PedidoComercialService {
                         pedido.getCorePedidoId()
                 );
 
+        pedido.setStatus(br.com.inova.sigin.delivery.pedido.enums.StatusPedido.FINALIZADO);
+        pedido.setStatusAlteradoEm(LocalDateTime.now());
+        repository.save(pedido);
+
         return sincronizar(pedido, coreResponse);
     }
 

@@ -109,6 +109,30 @@ public class PedidoConsultaService {
                         )
                 )
                 .stream()
+                .filter(pedido -> {
+                    // Pedido FINALIZADO somente com itens de BALCÃO
+                    // já teve seu fluxo concluído e não deve mais aparecer aqui.
+                    if (pedido.getStatus() == StatusPedido.FINALIZADO) {
+                        return pedido.getItens()
+                                .stream()
+                                .filter(item ->
+                                        item.getStatusOperacao() != StatusOperacao.CANCELADO
+                                )
+                                .anyMatch(item ->
+                                        item.getSetor() != null
+                                                && (
+                                                "COZINHA".equalsIgnoreCase(
+                                                        item.getSetor().trim()
+                                                )
+                                                        || "PIZZARIA".equalsIgnoreCase(
+                                                        item.getSetor().trim()
+                                                )
+                                        )
+                                );
+                    }
+
+                    return true;
+                })
                 .map(this::toBalcaoResponse)
                 .toList();
     }

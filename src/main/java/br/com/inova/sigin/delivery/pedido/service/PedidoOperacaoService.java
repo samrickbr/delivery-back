@@ -34,6 +34,7 @@ public class PedidoOperacaoService {
     private final PedidoHistoricoService historicoService;
     private final CoreClient coreClient;
     private final EventoProducaoService eventoProducaoService;
+    private final PedidoComercialService pedidoComercialService;
 
     @Transactional
     public PedidoResponse aprovar(
@@ -60,6 +61,17 @@ public class PedidoOperacaoService {
                 .filter(item -> item.getStatusOperacao() != StatusOperacao.CANCELADO)
                 .anyMatch(this::ehItemProducao);
 
+        boolean possuiClienteIdentificado = pedido.getClienteId() != null;
+
+        boolean possuiEntregaOuRetirada =
+                "ENTREGA".equalsIgnoreCase(pedido.getTipoRecebimento())
+                        || "RETIRADA".equalsIgnoreCase(pedido.getTipoRecebimento());
+
+        boolean precisaConferencia =
+                possuiItensProducao
+                        || possuiClienteIdentificado
+                        || possuiEntregaOuRetirada;
+
         if (!possuiItensProducao) {
             pedido.setStatus(StatusPedido.FINALIZADO);
         }
@@ -77,11 +89,24 @@ public class PedidoOperacaoService {
 
         PedidoResponse response = mapper.toResponse(repository.save(pedido));
 
+        /*
+         * Pedido somente BALCÃO:
+         * não precisa passar por produção/conferência.
+         * Ao ser aprovado, a venda é finalizada e faturada diretamente no Core.
+         */
+        if (!precisaConferencia) {
+            response = pedidoComercialService.faturar(pedido.getId());
+        }
+
         var setores = response.getItens()
                 .stream()
                 .filter(item -> item.getSetor() != null)
-                .filter(item -> !"CANCELADO".equalsIgnoreCase(item.getStatusOperacao()))
-                .map(item -> item.getSetor().trim().toUpperCase())
+                .filter(item ->
+                        !"CANCELADO".equalsIgnoreCase(item.getStatusOperacao())
+                )
+                .map(item ->
+                        item.getSetor().trim().toUpperCase()
+                )
                 .filter(setor ->
                         "COZINHA".equals(setor)
                                 || "PIZZARIA".equals(setor)
@@ -89,26 +114,21 @@ public class PedidoOperacaoService {
                 .distinct()
                 .toList();
 
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        if (possuiItensProducao) {
+        if (possuiItensProducao) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
                             setores.forEach(setor ->
                                     eventoProducaoService.novoPedido(
                                             pedido,
                                             setor
                                     )
                             );
-                        } else {
-                            eventoProducaoService.pedidoPronto(
-                                    pedido,
-                                    null
-                            );
                         }
                     }
-                }
-        );
+            );
+        }
 
         return response;
     }
