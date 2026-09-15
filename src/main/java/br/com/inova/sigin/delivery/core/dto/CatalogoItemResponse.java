@@ -3,7 +3,6 @@ package br.com.inova.sigin.delivery.core.dto;
 import lombok.Data;
 
 import java.math.BigDecimal;
-
 @Data
 public class CatalogoItemResponse {
 
@@ -16,4 +15,6 @@ public class CatalogoItemResponse {
     private String produto;
 
     private Long produtoId;
+
+    private String setor;
 }

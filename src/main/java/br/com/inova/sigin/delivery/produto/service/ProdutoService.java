@@ -72,6 +72,7 @@ public class ProdutoService {
                 .categoria(null)
                 .preco(item.getPrecoVenda())
                 .imagem(item.getImagem())
+                .setor(item.getSetor())
                 .build();
     }
 }

@@ -20,4 +20,6 @@ public class CardapioResponse {
     private BigDecimal preco;
 
     private String imagem;
+
+    private String setor;
 }
