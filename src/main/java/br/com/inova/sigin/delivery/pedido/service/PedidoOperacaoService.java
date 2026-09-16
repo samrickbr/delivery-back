@@ -2,6 +2,7 @@ package br.com.inova.sigin.delivery.pedido.service;
 
 import br.com.inova.sigin.delivery.core.client.CoreClient;
 import br.com.inova.sigin.delivery.core.dto.CoreAuthMeResponse;
+import br.com.inova.sigin.delivery.core.dto.PessoaResponse;
 import br.com.inova.sigin.delivery.evento.service.EventoProducaoService;
 import br.com.inova.sigin.delivery.pedido.dto.PedidoPendenciaRequest;
 import br.com.inova.sigin.delivery.pedido.dto.PedidoResponse;
@@ -34,6 +35,7 @@ public class PedidoOperacaoService {
     private final PedidoHistoricoService historicoService;
     private final CoreClient coreClient;
     private final EventoProducaoService eventoProducaoService;
+    private final PedidoComercialService pedidoComercialService;
     @Transactional
     public PedidoResponse aprovar(
             Long id,
@@ -54,6 +56,37 @@ public class PedidoOperacaoService {
                         item.setStatusOperacao(StatusOperacao.APROVADO)
                 );
 
+        boolean possuiItensProducao = pedido.getItens()
+                .stream()
+                .filter(item ->
+                        item.getStatusOperacao() != StatusOperacao.CANCELADO
+                )
+                .anyMatch(this::ehItemProducao);
+
+        PessoaResponse consumidorFinal = coreClient.buscarConsumidorFinal();
+
+        boolean possuiClienteIdentificado =
+                pedido.getClienteId() != null
+                        && !pedido.getClienteId().equals(consumidorFinal.getId());
+
+        boolean somenteBalcao =
+                pedido.getItens()
+                        .stream()
+                        .filter(item ->
+                                item.getStatusOperacao() != StatusOperacao.CANCELADO
+                        )
+                        .allMatch(item ->
+                                "BALCAO".equalsIgnoreCase(item.getSetor())
+                        );
+
+        boolean retirada =
+                "RETIRADA".equalsIgnoreCase(pedido.getTipoRecebimento());
+
+        boolean finalizacaoDireta =
+                somenteBalcao
+                        && !possuiClienteIdentificado
+                        && retirada;
+
         pedido.setStatusAlteradoEm(LocalDateTime.now());
 
         historicoService.registrar(
@@ -65,17 +98,23 @@ public class PedidoOperacaoService {
                 "Pedido aprovado."
         );
 
-        PedidoResponse response = mapper.toResponse(
-                repository.save(pedido)
-        );
+        PedidoResponse response;
+
+        if (finalizacaoDireta) {
+            pedido.setStatus(StatusPedido.FINALIZADO);
+            response = mapper.toResponse(repository.save(pedido));
+
+            response = pedidoComercialService.faturar(pedido.getId());
+        } else {
+            pedido.setStatus(StatusPedido.APROVADO);
+            response = mapper.toResponse(repository.save(pedido));
+        }
 
         var setores = response.getItens()
                 .stream()
                 .filter(item -> item.getSetor() != null)
                 .filter(item ->
-                        !"CANCELADO".equalsIgnoreCase(
-                                item.getStatusOperacao()
-                        )
+                        !"CANCELADO".equalsIgnoreCase(item.getStatusOperacao())
                 )
                 .map(item ->
                         item.getSetor().trim().toUpperCase()
@@ -87,7 +126,7 @@ public class PedidoOperacaoService {
                 .distinct()
                 .toList();
 
-        if (!setores.isEmpty()) {
+        if (possuiItensProducao) {
             TransactionSynchronizationManager.registerSynchronization(
                     new TransactionSynchronization() {
                         @Override
@@ -191,6 +230,9 @@ public class PedidoOperacaoService {
 
         Long usuarioId = buscarUsuarioId(authorization);
 
+        boolean eraAguardandoSeparacao =
+                pedido.getStatus() == StatusPedido.AGUARDANDO_SEPARACAO;
+
         pedido.getItens()
                 .stream()
                 .filter(item ->
@@ -223,9 +265,24 @@ public class PedidoOperacaoService {
                 usuarioId,
                 "Sistema",
                 setor,
-                "PRODUCAO_FINALIZADA",
+                "FINALIZADO",
                 "Setor finalizou a produção."
         );
+
+        if (!eraAguardandoSeparacao
+                && pedido.getStatus() == StatusPedido.AGUARDANDO_SEPARACAO) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            eventoProducaoService.pedidoPronto(
+                                    pedido,
+                                    setor
+                            );
+                        }
+                    }
+            );
+        }
 
         return mapper.toResponse(pedido);
     }

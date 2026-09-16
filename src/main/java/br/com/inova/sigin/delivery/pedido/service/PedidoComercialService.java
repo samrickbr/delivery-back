@@ -1,10 +1,12 @@
 package br.com.inova.sigin.delivery.pedido.service;
 
 import br.com.inova.sigin.delivery.core.client.CoreClient;
+import br.com.inova.sigin.delivery.core.dto.PessoaResponse;
 import br.com.inova.sigin.delivery.pedido.dto.PedidoItemRequest;
 import br.com.inova.sigin.delivery.pedido.dto.PedidoPagamentoRequest;
 import br.com.inova.sigin.delivery.pedido.dto.PedidoResponse;
 import br.com.inova.sigin.delivery.pedido.entity.Pedido;
+import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
 import br.com.inova.sigin.delivery.pedido.exception.ProducoesPendentesException;
 import br.com.inova.sigin.delivery.pedido.mapper.PedidoMapper;
 import br.com.inova.sigin.delivery.pedido.repository.PedidoRepository;
@@ -213,6 +215,8 @@ public class PedidoComercialService {
     public PedidoResponse faturar(Long pedidoId) {
         Pedido pedido = buscarEntidade(pedidoId);
 
+        validarStatusPermitidoParaFaturamento(pedido);
+
         concluirItensDeBalcao(pedido);
         validarItensParaFaturamento(pedido);
 
@@ -227,7 +231,37 @@ public class PedidoComercialService {
 
         return sincronizar(pedido, coreResponse);
     }
+    private void validarStatusPermitidoParaFaturamento(Pedido pedido) {
+        StatusPedido status = pedido.getStatus();
 
+        PessoaResponse consumidorFinal = coreClient.buscarConsumidorFinal();
+
+        boolean ehConsumidorFinal =
+                pedido.getClienteId() != null
+                        && pedido.getClienteId().equals(consumidorFinal.getId());
+
+        boolean excecaoBalcaoRetirada =
+                status == StatusPedido.FINALIZADO
+                        && ehConsumidorFinal
+                        && "RETIRADA".equalsIgnoreCase(
+                        pedido.getTipoRecebimento()
+                )
+                        && pedido.getItens()
+                        .stream()
+                        .filter(item -> item.getStatusOperacao() != StatusOperacao.CANCELADO)
+                        .allMatch(item ->
+                                "BALCAO".equalsIgnoreCase(item.getSetor())
+                        );
+
+        boolean pedidoEntregue =
+                status == StatusPedido.ENTREGUE;
+
+        if (!excecaoBalcaoRetirada && !pedidoEntregue) {
+            throw new IllegalArgumentException(
+                    "Pedido não está em uma situação permitida para faturamento."
+            );
+        }
+    }
     private void concluirItensDeBalcao(Pedido pedido) {
         boolean alterou = false;
 

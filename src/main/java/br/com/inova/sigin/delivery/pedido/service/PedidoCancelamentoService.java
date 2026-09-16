@@ -6,7 +6,6 @@ import br.com.inova.sigin.delivery.pedido.dto.CancelamentoRequest;
 import br.com.inova.sigin.delivery.pedido.dto.PedidoResponse;
 import br.com.inova.sigin.delivery.pedido.entity.Pedido;
 import br.com.inova.sigin.delivery.pedido.enums.StatusPedido;
-import br.com.inova.sigin.delivery.pedido.mapper.PedidoMapper;
 import br.com.inova.sigin.delivery.pedido.repository.PedidoRepository;
 import br.com.inova.sigin.delivery.pedidohistorico.service.PedidoHistoricoService;
 import br.com.inova.sigin.delivery.pedidoitem.entity.PedidoItem;
@@ -23,7 +22,6 @@ import java.util.List;
 public class PedidoCancelamentoService {
 
     private final PedidoRepository repository;
-    private final PedidoMapper mapper;
     private final PedidoHistoricoService historicoService;
     private final CoreClient coreClient;
     private final PedidoProjecaoService pedidoProjecaoService;
@@ -42,15 +40,7 @@ public class PedidoCancelamentoService {
                 cancelarItemLocal(item, justificativa)
         );
 
-        boolean todosCancelados = pedido.getItens()
-                .stream()
-                .allMatch(item ->
-                        item.getStatusOperacao() == StatusOperacao.CANCELADO
-                );
-
-        if (todosCancelados) {
-            pedido.setStatus(StatusPedido.CANCELADO);
-        }
+        recalcularStatusAposCancelamento(pedido);
 
         pedido.setObservacaoOperacao(justificativa);
         pedido.setStatusAlteradoEm(LocalDateTime.now());
@@ -92,6 +82,8 @@ public class PedidoCancelamentoService {
         }
 
         cancelarItemLocal(item, justificativa);
+        recalcularStatusAposCancelamento(pedido);
+
         pedido.setStatusAlteradoEm(LocalDateTime.now());
         removerItensNoCore(pedido, List.of(item));
 
@@ -143,6 +135,8 @@ public class PedidoCancelamentoService {
                 cancelarItemLocal(item, justificativa)
         );
 
+        recalcularStatusAposCancelamento(pedido);
+
         itensParaCancelar.forEach(item ->
                 historicoService.registrar(
                         pedido,
@@ -190,7 +184,39 @@ public class PedidoCancelamentoService {
 
         return response;
     }
+    private void recalcularStatusAposCancelamento(Pedido pedido) {
+        boolean todosCancelados = pedido.getItens()
+                .stream()
+                .allMatch(item ->
+                        item.getStatusOperacao() == StatusOperacao.CANCELADO
+                );
 
+        if (todosCancelados) {
+            pedido.setStatus(StatusPedido.CANCELADO);
+            return;
+        }
+
+        boolean existeProducaoPendente = pedido.getItens()
+                .stream()
+                .filter(item ->
+                        item.getStatusOperacao() != StatusOperacao.CANCELADO
+                )
+                .anyMatch(item -> {
+                    String setor = getSetor(item);
+
+                    boolean itemProducao =
+                            setor != null
+                                    && ("COZINHA".equalsIgnoreCase(setor)
+                                    || "PIZZARIA".equalsIgnoreCase(setor));
+
+                    return itemProducao
+                            && item.getStatusOperacao() != StatusOperacao.FINALIZADO;
+                });
+
+        if (!existeProducaoPendente) {
+            pedido.setStatus(StatusPedido.AGUARDANDO_SEPARACAO);
+        }
+    }
     private void removerItensNoCore(
             Pedido pedido,
             List<PedidoItem> itens

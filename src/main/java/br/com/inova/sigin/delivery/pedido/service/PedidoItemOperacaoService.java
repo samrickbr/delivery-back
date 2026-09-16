@@ -99,7 +99,6 @@ public class PedidoItemOperacaoService {
     @Transactional
     public PedidoResponse finalizarItem(Long pedidoId, Long itemId) {
         Pedido pedido = buscarEntidade(pedidoId);
-        boolean eraFinalizado = pedido.getStatus() == StatusPedido.FINALIZADO;
         PedidoItem item = buscarItemDoPedido(pedido, itemId);
 
         validarItemNaoCancelado(item);
@@ -122,7 +121,7 @@ public class PedidoItemOperacaoService {
                 );
 
         if (todosFinalizados) {
-            pedido.setStatus(StatusPedido.FINALIZADO);
+            pedido.setStatus(StatusPedido.AGUARDANDO_SEPARACAO);
         }
 
         pedido.setStatusAlteradoEm(LocalDateTime.now());
@@ -137,8 +136,8 @@ public class PedidoItemOperacaoService {
                 "Item finalizou a produção."
         );
 
-        boolean pedidoFoiFinalizado = !eraFinalizado
-                && pedido.getStatus() == StatusPedido.FINALIZADO;
+        boolean pedidoFicouProntoParaSeparacao =
+                pedido.getStatus() == StatusPedido.AGUARDANDO_SEPARACAO;
 
         TransactionSynchronizationManager.registerSynchronization(
                 new TransactionSynchronization() {
@@ -149,7 +148,7 @@ public class PedidoItemOperacaoService {
                                 item
                         );
 
-                        if (pedidoFoiFinalizado) {
+                        if (pedidoFicouProntoParaSeparacao) {
                             eventoProducaoService.pedidoPronto(
                                     pedido,
                                     getSetor(item)
