@@ -34,8 +34,6 @@ public class PedidoOperacaoService {
     private final PedidoHistoricoService historicoService;
     private final CoreClient coreClient;
     private final EventoProducaoService eventoProducaoService;
-    private final PedidoComercialService pedidoComercialService;
-
     @Transactional
     public PedidoResponse aprovar(
             Long id,
@@ -56,26 +54,6 @@ public class PedidoOperacaoService {
                         item.setStatusOperacao(StatusOperacao.APROVADO)
                 );
 
-        boolean possuiItensProducao = pedido.getItens()
-                .stream()
-                .filter(item -> item.getStatusOperacao() != StatusOperacao.CANCELADO)
-                .anyMatch(this::ehItemProducao);
-
-        boolean possuiClienteIdentificado = pedido.getClienteId() != null;
-
-        boolean possuiEntregaOuRetirada =
-                "ENTREGA".equalsIgnoreCase(pedido.getTipoRecebimento())
-                        || "RETIRADA".equalsIgnoreCase(pedido.getTipoRecebimento());
-
-        boolean precisaConferencia =
-                possuiItensProducao
-                        || possuiClienteIdentificado
-                        || possuiEntregaOuRetirada;
-
-        if (!possuiItensProducao) {
-            pedido.setStatus(StatusPedido.FINALIZADO);
-        }
-
         pedido.setStatusAlteradoEm(LocalDateTime.now());
 
         historicoService.registrar(
@@ -87,22 +65,17 @@ public class PedidoOperacaoService {
                 "Pedido aprovado."
         );
 
-        PedidoResponse response = mapper.toResponse(repository.save(pedido));
-
-        /*
-         * Pedido somente BALCÃO:
-         * não precisa passar por produção/conferência.
-         * Ao ser aprovado, a venda é finalizada e faturada diretamente no Core.
-         */
-        if (!precisaConferencia) {
-            response = pedidoComercialService.faturar(pedido.getId());
-        }
+        PedidoResponse response = mapper.toResponse(
+                repository.save(pedido)
+        );
 
         var setores = response.getItens()
                 .stream()
                 .filter(item -> item.getSetor() != null)
                 .filter(item ->
-                        !"CANCELADO".equalsIgnoreCase(item.getStatusOperacao())
+                        !"CANCELADO".equalsIgnoreCase(
+                                item.getStatusOperacao()
+                        )
                 )
                 .map(item ->
                         item.getSetor().trim().toUpperCase()
@@ -114,7 +87,7 @@ public class PedidoOperacaoService {
                 .distinct()
                 .toList();
 
-        if (possuiItensProducao) {
+        if (!setores.isEmpty()) {
             TransactionSynchronizationManager.registerSynchronization(
                     new TransactionSynchronization() {
                         @Override
@@ -191,6 +164,7 @@ public class PedidoOperacaoService {
                         item.setStatusOperacao(StatusOperacao.EM_PRODUCAO)
                 );
 
+        pedido.setStatus(StatusPedido.EM_PRODUCAO);
         pedido.setStatusAlteradoEm(LocalDateTime.now());
 
         historicoService.registrar(
@@ -214,7 +188,6 @@ public class PedidoOperacaoService {
             String authorization
     ) {
         Pedido pedido = buscarEntidade(id);
-        boolean eraFinalizado = pedido.getStatus() == StatusPedido.FINALIZADO;
 
         Long usuarioId = buscarUsuarioId(authorization);
 
@@ -238,7 +211,7 @@ public class PedidoOperacaoService {
                         );
 
         if (todosFinalizados) {
-            pedido.setStatus(StatusPedido.FINALIZADO);
+            pedido.setStatus(StatusPedido.AGUARDANDO_SEPARACAO);
         }
 
         pedido.setStatusAlteradoEm(LocalDateTime.now());
@@ -250,24 +223,9 @@ public class PedidoOperacaoService {
                 usuarioId,
                 "Sistema",
                 setor,
-                "FINALIZADO",
+                "PRODUCAO_FINALIZADA",
                 "Setor finalizou a produção."
         );
-
-        if (!eraFinalizado
-                && pedido.getStatus() == StatusPedido.FINALIZADO) {
-            TransactionSynchronizationManager.registerSynchronization(
-                    new TransactionSynchronization() {
-                        @Override
-                        public void afterCommit() {
-                            eventoProducaoService.pedidoPronto(
-                                    pedido,
-                                    setor
-                            );
-                        }
-                    }
-            );
-        }
 
         return mapper.toResponse(pedido);
     }
@@ -283,7 +241,6 @@ public class PedidoOperacaoService {
 
         LocalDateTime agora = LocalDateTime.now();
 
-        pedido.setStatus(StatusPedido.AGUARDANDO_SEPARACAO);
         pedido.setConferenciaEm(agora);
         pedido.setConferenciaPorUsuarioId(usuarioId);
         pedido.setStatusAlteradoEm(agora);
